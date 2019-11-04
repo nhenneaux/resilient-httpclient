@@ -1,0 +1,8 @@
+language: java
+jdk:
+  - openjdk11
+  - openjdk12
+  - openjdk13
+sudo: false # faster builds
+
+script: "mvn install"
