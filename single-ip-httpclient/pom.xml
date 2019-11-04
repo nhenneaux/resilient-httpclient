@@ -9,5 +9,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>single-ip-httpclient</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

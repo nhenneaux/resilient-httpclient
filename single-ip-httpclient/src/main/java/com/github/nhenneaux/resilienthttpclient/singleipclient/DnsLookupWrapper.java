@@ -1,0 +1,26 @@
+package com.github.nhenneaux.resilienthttpclient.singleipclient;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+class DnsLookupWrapper {
+
+    /**
+     * Looks up for the IP addresses for the given host name.
+     */
+    public List<InetAddress> getInetAddressesByDnsLookUp(final String hostName) {
+        final InetAddress[] inetSocketAddresses;
+        try {
+            inetSocketAddresses = InetAddress.getAllByName(hostName);
+        } catch (UnknownHostException e) {
+            throw new IllegalStateException("Cannot perform a DNS lookup for the hostname: " + hostName + ".", e);
+        }
+
+        return Arrays.stream(inetSocketAddresses)
+                .collect(Collectors.toList());
+    }
+
+}
