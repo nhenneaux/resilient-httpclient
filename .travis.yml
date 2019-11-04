@@ -5,4 +5,4 @@ jdk:
   - openjdk13
 sudo: false # faster builds
 
-script: "mvn install"
+script: "mvn verify"
