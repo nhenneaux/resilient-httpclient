@@ -29,9 +29,9 @@ import static java.util.stream.Collectors.joining;
 
 
 @SuppressWarnings("WeakerAccess") // To use outside the module
-public class HttpClientForSpecificIp {
+public class HttpClientForSpecificIpFactory {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpClientForSpecificIp.class.getSimpleName());
+    private static final Logger LOGGER = Logger.getLogger(HttpClientForSpecificIpFactory.class.getSimpleName());
 
     private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
 

@@ -10,7 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class HttpClientForSpecificIpTest {
+class HttpClientForSpecificIpFactoryTest {
 
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
@@ -19,7 +19,7 @@ class HttpClientForSpecificIpTest {
         for (String hostname : hosts) {
             final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0).getHostAddress();
 
-            final HttpClient client = new HttpClientForSpecificIp().buildSingleHostnameHttpClient(hostname);
+            final HttpClient client = new HttpClientForSpecificIpFactory().buildSingleHostnameHttpClient(hostname);
 
 
             HttpRequest request = HttpRequest.newBuilder()

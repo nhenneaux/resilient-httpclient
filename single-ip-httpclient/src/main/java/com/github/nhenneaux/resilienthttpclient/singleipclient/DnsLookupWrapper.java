@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-class DnsLookupWrapper {
+public class DnsLookupWrapper {
 
     /**
      * Looks up for the IP addresses for the given host name.

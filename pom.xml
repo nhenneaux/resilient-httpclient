@@ -16,5 +16,6 @@
     </properties>
     <modules>
         <module>single-ip-httpclient</module>
+        <module>monitored-httpclient</module>
     </modules>
 </project>
