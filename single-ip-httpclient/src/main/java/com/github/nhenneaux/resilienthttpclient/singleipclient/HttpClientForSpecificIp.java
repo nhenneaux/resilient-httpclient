@@ -37,43 +37,18 @@ public class HttpClientForSpecificIp {
 
 
     public HttpClient buildSingleHostnameHttpClient(String hostname) {
-        final TrustManagerFactory instance;
-        try {
-            instance = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-        try {
-            // TODO review truststore loading to be able to provide a custom one
-            instance.init((KeyStore) null);
-        } catch (KeyStoreException e) {
-            throw new IllegalStateException(e);
-        }
-        final TrustManager[] trustManagers = instance.getTrustManagers();
-        final X509TrustManager trustManager = (X509TrustManager) trustManagers[0];
-        TrustManager[] trustOnlyGivenHostname = new TrustManager[]{
-                new SingleHostnameX509TrustManager(trustManager, hostname)
-        };
+        return buildSingleHostnameHttpClient(hostname, null);
+    }
 
-        Properties props = System.getProperties();
-
-        final SSLContext aDefault;
-        try {
-            aDefault = SSLContext.getInstance("TLS");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-        try {
-            aDefault.init(null, trustOnlyGivenHostname, new SecureRandom());
-        } catch (KeyManagementException e) {
-            throw new IllegalStateException(e);
-        }
+    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore) {
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
 
         final HttpClient client;
+        Properties props = System.getProperties();
         final String previousDisable = (String) props.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
         try {
             client = HttpClient.newBuilder()
-                    .sslContext(aDefault)
+                    .sslContext(sslContextForSingleHostname)
                     .build();
         } finally {
             if (previousDisable == null) {
@@ -83,6 +58,39 @@ public class HttpClientForSpecificIp {
             }
         }
         return client;
+    }
+
+    private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
+        final TrustManagerFactory instance;
+        try {
+            instance = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        try {
+            instance.init(truststore);
+        } catch (KeyStoreException e) {
+            throw new IllegalStateException(e);
+        }
+        final TrustManager[] trustManagers = instance.getTrustManagers();
+        final X509TrustManager trustManager = (X509TrustManager) trustManagers[0];
+        TrustManager[] trustOnlyGivenHostname = new TrustManager[]{
+                new SingleHostnameX509TrustManager(trustManager, hostname)
+        };
+
+
+        final SSLContext sslContextForSingleHostname;
+        try {
+            sslContextForSingleHostname = SSLContext.getInstance("TLS");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        try {
+            sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom());
+        } catch (KeyManagementException e) {
+            throw new IllegalStateException(e);
+        }
+        return sslContextForSingleHostname;
     }
 
 
