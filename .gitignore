@@ -31,3 +31,7 @@ resilient-java-httpclient.iml
 sonarlint/
 uiDesigner.xml
 vcs.xml
+
+/.idea
+*.iml
+target/
