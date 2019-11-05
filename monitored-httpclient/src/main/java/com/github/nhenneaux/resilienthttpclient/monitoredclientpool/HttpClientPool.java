@@ -1,8 +1,8 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
-import com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientForSpecificIpFactory;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider;
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("WeakerAccess")
 public class HttpClientPool {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpClientForSpecificIpFactory.class.getSimpleName());
+    private static final Logger LOGGER = Logger.getLogger(HttpClientPool.class.getSimpleName());
 
 
     private final AtomicReference<GenericRoundRobinListWithHealthCheck<HttpClientWithHealth>> httpClientsCache;
@@ -40,7 +40,7 @@ public class HttpClientPool {
     ) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
-        this.singleHostnameClient = new HttpClientForSpecificIpFactory().buildSingleHostnameHttpClient(serverConfiguration.getHostname());
+        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname());
 
         checkDnsCacheSecurityProperties();
 

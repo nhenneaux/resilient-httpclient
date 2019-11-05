@@ -1,6 +1,5 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
-import com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientForSpecificIpFactory;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 
 import java.net.InetAddress;
@@ -16,7 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HttpClientWithHealth implements ItemWithHealth {
-    private static final Logger LOGGER = Logger.getLogger(HttpClientForSpecificIpFactory.class.getSimpleName());
+    private static final Logger LOGGER = Logger.getLogger(HttpClientWithHealth.class.getSimpleName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
