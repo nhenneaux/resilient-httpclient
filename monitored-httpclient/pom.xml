@@ -14,7 +14,7 @@
     <dependencies>
         <dependency>
             <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
-            <artifactId>single-ip-httpclient</artifactId>
+            <artifactId>single-host-httpclient</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
