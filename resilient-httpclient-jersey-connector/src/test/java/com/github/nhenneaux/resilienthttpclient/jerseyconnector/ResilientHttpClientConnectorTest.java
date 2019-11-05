@@ -23,12 +23,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ResilientHttpClientConnectorTest {
 
+    private static final NoOpCallback CALLBACK = new NoOpCallback();
     private static final String JSON = "\n" +
             "\n" +
             "{\n" +
@@ -76,13 +79,42 @@ class ResilientHttpClientConnectorTest {
         assertEquals(200, response.getStatus());
     }
 
-    // TODO handle case without callback
     @Test
     void shouldWorkWithJaxRsClientForStatusAsync() throws InterruptedException, ExecutionException, TimeoutException {
         final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
         final WebTarget target = client.target("https://devoxx.be");
-        final Response response = target.request().async().get(new NoOpCallback()).get(1, TimeUnit.SECONDS);
+        final Response response = target.request().async().get().get(2, TimeUnit.SECONDS);
         assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void shouldWorkWithJaxRsClientForStatusAsyncWithCallback() throws InterruptedException, ExecutionException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://devoxx.be");
+        final Response response = target.request().async().get(CALLBACK).get(2, TimeUnit.SECONDS);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void shouldWorkWithJaxRsClientForStatusAsyncWithCallbackCheck() throws InterruptedException, ExecutionException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://devoxx.be");
+        final AtomicReference<Response> objectAtomicReference = new AtomicReference<>();
+        final Response response = target.request().async().get(new InvocationCallback<Response>() {
+            @Override
+            public void completed(Response response) {
+                objectAtomicReference.set(response);
+            }
+
+            @Override
+            public void failed(Throwable throwable) {
+
+            }
+        }).get(2, TimeUnit.SECONDS);
+
+        assertSame(response, objectAtomicReference.get());
+        assertEquals(200, response.getStatus());
+        assertEquals(200, objectAtomicReference.get().getStatus());
     }
 
     @Test
@@ -120,9 +152,44 @@ class ResilientHttpClientConnectorTest {
     void shouldWorkWithJaxRsClientWithJsonPostAsync() throws ExecutionException, InterruptedException, TimeoutException {
         final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
         final WebTarget target = client.target("https://postman-echo.com/post");
-        final Future<Response> responseFuture = target.request().async().post(Entity.entity(JSON, MediaType.APPLICATION_JSON_TYPE), new NoOpCallback());
-        final Response response = responseFuture.get(1, TimeUnit.SECONDS);
+        final Future<Response> responseFuture = target.request().async().post(Entity.entity(JSON, MediaType.APPLICATION_JSON_TYPE));
+        final Response response = responseFuture.get(2, TimeUnit.SECONDS);
         assertEquals(200, response.getStatus());
+        assertNotNull(response.readEntity(String.class));
+    }
+
+    @Test
+    void shouldWorkWithJaxRsClientWithJsonPostAsyncWithCallback() throws ExecutionException, InterruptedException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://postman-echo.com/post");
+        final Future<Response> responseFuture = target.request().async().post(Entity.entity(JSON, MediaType.APPLICATION_JSON_TYPE), CALLBACK);
+        final Response response = responseFuture.get(2, TimeUnit.SECONDS);
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.readEntity(String.class));
+    }
+
+    @Test
+    void shouldWorkWithJaxRsClientWithJsonPostAsyncWithCallbackCheck() throws ExecutionException, InterruptedException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://postman-echo.com/post");
+
+        final AtomicReference<Response> objectAtomicReference = new AtomicReference<>();
+        final Future<Response> responseFuture = target.request().async().post(Entity.entity(JSON, MediaType.APPLICATION_JSON_TYPE), new InvocationCallback<>() {
+            @Override
+            public void completed(Response response) {
+                objectAtomicReference.set(response);
+            }
+
+            @Override
+            public void failed(Throwable throwable) {
+
+            }
+        });
+        final Response response = responseFuture.get(2, TimeUnit.SECONDS);
+
+        assertSame(response, objectAtomicReference.get());
+        assertEquals(200, response.getStatus());
+        assertEquals(200, objectAtomicReference.get().getStatus());
         assertNotNull(response.readEntity(String.class));
     }
 
