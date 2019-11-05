@@ -17,6 +17,5 @@
     <modules>
         <module>single-host-httpclient</module>
         <module>monitored-httpclient</module>
-        <module>resilient-httpclient-jersey-connector</module>
     </modules>
 </project>

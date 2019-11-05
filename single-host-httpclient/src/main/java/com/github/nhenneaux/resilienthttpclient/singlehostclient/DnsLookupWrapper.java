@@ -10,6 +10,8 @@ public class DnsLookupWrapper {
 
     /**
      * Looks up for the IP addresses for the given host name.
+     * @param hostName the name to resolve
+     * @return the list of {@link InetAddress} resolved from the given name
      */
     public List<InetAddress> getInetAddressesByDnsLookUp(final String hostName) {
         final InetAddress[] inetSocketAddresses;
