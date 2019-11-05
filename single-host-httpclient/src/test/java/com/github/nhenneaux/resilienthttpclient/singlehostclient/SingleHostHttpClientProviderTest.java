@@ -1,4 +1,4 @@
-package com.github.nhenneaux.resilienthttpclient.singleipclient;
+package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class HttpClientForSpecificIpFactoryTest {
+class SingleHostHttpClientProviderTest {
 
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
@@ -19,7 +19,7 @@ class HttpClientForSpecificIpFactoryTest {
         for (String hostname : hosts) {
             final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0).getHostAddress();
 
-            final HttpClient client = new HttpClientForSpecificIpFactory().buildSingleHostnameHttpClient(hostname);
+            final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
 
 
             HttpRequest request = HttpRequest.newBuilder()

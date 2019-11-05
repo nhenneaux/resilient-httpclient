@@ -1,4 +1,4 @@
-package com.github.nhenneaux.resilienthttpclient.singleipclient;
+package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

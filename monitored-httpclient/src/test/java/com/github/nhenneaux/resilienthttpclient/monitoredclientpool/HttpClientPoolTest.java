@@ -1,7 +1,7 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
-import com.github.nhenneaux.resilienthttpclient.singleipclient.DnsLookupWrapper;
-import com.github.nhenneaux.resilienthttpclient.singleipclient.ServerConfiguration;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 

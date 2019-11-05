@@ -1,4 +1,4 @@
-package com.github.nhenneaux.resilienthttpclient.singleipclient;
+package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
@@ -28,13 +28,17 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 
 
+/**
+ * Create an {@link HttpClient} to target a single host.
+ * It validates the certificate to authenticate the server in TLS communication with this single name.
+ * It can be used to target a single host using its IP address(es) instead of its hostname while keeping a high protection against Man-in-the-middle attack.
+ */
 @SuppressWarnings("WeakerAccess") // To use outside the module
-public class HttpClientForSpecificIpFactory {
+public class SingleHostHttpClientProvider {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpClientForSpecificIpFactory.class.getSimpleName());
+    private static final Logger LOGGER = Logger.getLogger(SingleHostHttpClientProvider.class.getSimpleName());
 
     private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
-
 
     public HttpClient buildSingleHostnameHttpClient(String hostname) {
         return buildSingleHostnameHttpClient(hostname, null);

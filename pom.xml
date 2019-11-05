@@ -15,7 +15,7 @@
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
     <modules>
-        <module>single-ip-httpclient</module>
+        <module>single-host-httpclient</module>
         <module>monitored-httpclient</module>
         <module>resilient-httpclient-jersey-connector</module>
     </modules>

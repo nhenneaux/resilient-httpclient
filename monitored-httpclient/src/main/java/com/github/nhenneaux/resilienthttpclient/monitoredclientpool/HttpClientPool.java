@@ -1,8 +1,8 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
-import com.github.nhenneaux.resilienthttpclient.singleipclient.DnsLookupWrapper;
-import com.github.nhenneaux.resilienthttpclient.singleipclient.HttpClientForSpecificIpFactory;
-import com.github.nhenneaux.resilienthttpclient.singleipclient.ServerConfiguration;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientForSpecificIpFactory;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
