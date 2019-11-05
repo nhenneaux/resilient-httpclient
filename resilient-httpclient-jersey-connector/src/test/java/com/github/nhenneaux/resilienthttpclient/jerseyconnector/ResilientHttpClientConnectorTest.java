@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.InvocationCallback;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
@@ -18,6 +19,10 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -71,6 +76,15 @@ class ResilientHttpClientConnectorTest {
         assertEquals(200, response.getStatus());
     }
 
+    // TODO handle case without callback
+    @Test
+    void shouldWorkWithJaxRsClientForStatusAsync() throws InterruptedException, ExecutionException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://devoxx.be");
+        final Response response = target.request().async().get(new NoOpCallback()).get(1, TimeUnit.SECONDS);
+        assertEquals(200, response.getStatus());
+    }
+
     @Test
     void shouldWorkWithJaxRsClientForString() {
         final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
@@ -103,6 +117,16 @@ class ResilientHttpClientConnectorTest {
     }
 
     @Test
+    void shouldWorkWithJaxRsClientWithJsonPostAsync() throws ExecutionException, InterruptedException, TimeoutException {
+        final Client client = ClientBuilder.newClient(new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build())));
+        final WebTarget target = client.target("https://postman-echo.com/post");
+        final Future<Response> responseFuture = target.request().async().post(Entity.entity(JSON, MediaType.APPLICATION_JSON_TYPE), new NoOpCallback());
+        final Response response = responseFuture.get(1, TimeUnit.SECONDS);
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.readEntity(String.class));
+    }
+
+    @Test
     void shouldWorkWithJaxRsClientWithStreamPost() throws IOException {
         final ClientConfig configuration = new ClientConfig().connectorProvider((jaxRsClient, config) -> new ResilientHttpClientConnector(HttpClient.newBuilder().sslContext(jaxRsClient.getSslContext()).build()));
         configuration.register(MultiPartFeature.class);
@@ -124,5 +148,18 @@ class ResilientHttpClientConnectorTest {
                 .post(Entity.entity(multiPart, multiPart.getMediaType()));
         assertEquals(500, response.getStatus());
         assertNotNull(response.readEntity(String.class));
+    }
+
+    private static class NoOpCallback implements InvocationCallback<Response> {
+        @Override
+        public void completed(Response o) {
+            // Completing the response
+        }
+
+        @Override
+        public void failed(Throwable throwable) {
+            // Failed to response
+
+        }
     }
 }

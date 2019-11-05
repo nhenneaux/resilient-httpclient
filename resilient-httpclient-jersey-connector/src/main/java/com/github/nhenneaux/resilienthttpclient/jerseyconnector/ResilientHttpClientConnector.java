@@ -31,14 +31,7 @@ public class ResilientHttpClientConnector implements Connector {
 
     @Override
     public ClientResponse apply(ClientRequest clientRequest) {
-        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
-        clientRequest.getRequestHeaders()
-                .forEach((name, values) -> values.forEach(value -> requestBuilder.header(name, value)));
-        requestBuilder.uri(clientRequest.getUri());
-        final Object readTimeoutInMilliseconds = clientRequest.getConfiguration().getProperties().get(ClientProperties.READ_TIMEOUT);
-        if (isGreaterThanZero(readTimeoutInMilliseconds)) {
-            requestBuilder.timeout(Duration.of((Integer) readTimeoutInMilliseconds, ChronoUnit.MILLIS));
-        }
+        final HttpRequest.Builder requestBuilder = toHttpClientRequestBuilder(clientRequest);
         if (clientRequest.getEntity() == null) {
             requestBuilder.method(clientRequest.getMethod(), HttpRequest.BodyPublishers.noBody());
             final HttpResponse<InputStream> inputStreamHttpResponse;
@@ -52,25 +45,12 @@ public class ResilientHttpClientConnector implements Connector {
             }
             return toJerseyResponse(clientRequest, inputStreamHttpResponse);
         }
-        // Handle request body streamed
-        try (final PipedOutputStream pipedOutputStream = new PipedOutputStream();
-             final PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream)
-        ) {
-            clientRequest.setStreamProvider(contentLength -> pipedOutputStream);
-            requestBuilder.method(clientRequest.getMethod(), HttpRequest.BodyPublishers.ofInputStream(() -> pipedInputStream));
 
-            final CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture = httpClient.sendAsync(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+        final CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture = streamRequestBody(clientRequest, requestBuilder);
 
-            clientRequest.writeEntity();
+        final HttpResponse<InputStream> inputStreamHttpResponse = waitResponse(httpResponseCompletableFuture);
 
-            final HttpResponse<InputStream> inputStreamHttpResponse = waitResponse(httpResponseCompletableFuture);
-
-            return toJerseyResponse(clientRequest, inputStreamHttpResponse);
-        } catch (IOException e) {
-            throw new ProcessingException("The sending process failed with I/O error, " + e.getMessage(), e);
-        }
-
-
+        return toJerseyResponse(clientRequest, inputStreamHttpResponse);
     }
 
     private HttpResponse<InputStream> waitResponse(CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture) {
@@ -100,7 +80,58 @@ public class ResilientHttpClientConnector implements Connector {
 
     @Override
     public Future<?> apply(ClientRequest clientRequest, AsyncConnectorCallback asyncConnectorCallback) {
-        return null;
+
+        final HttpRequest.Builder requestBuilder = toHttpClientRequestBuilder(clientRequest);
+        if (clientRequest.getEntity() == null) {
+            requestBuilder.method(clientRequest.getMethod(), HttpRequest.BodyPublishers.noBody());
+            final CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture = httpClient.sendAsync(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            return toJerseyResponseWithCallback(clientRequest, httpResponseCompletableFuture, asyncConnectorCallback);
+        }
+        final CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture = streamRequestBody(clientRequest, requestBuilder);
+
+        return toJerseyResponseWithCallback(clientRequest, httpResponseCompletableFuture, asyncConnectorCallback);
+    }
+
+    private Future<?> toJerseyResponseWithCallback(ClientRequest clientRequest, CompletableFuture<HttpResponse<InputStream>> inputStreamHttpResponseFuture, AsyncConnectorCallback asyncConnectorCallback) {
+        final CompletableFuture<ClientResponse> clientResponseCompletableFuture = inputStreamHttpResponseFuture.thenApply(inputStreamHttpResponse -> toJerseyResponse(clientRequest, inputStreamHttpResponse));
+        clientResponseCompletableFuture.whenComplete((response, cause) -> {
+            if (cause == null) {
+                asyncConnectorCallback.response(response);
+            } else {
+                asyncConnectorCallback.failure(cause);
+            }
+        });
+        return clientResponseCompletableFuture;
+    }
+
+    private CompletableFuture<HttpResponse<InputStream>> streamRequestBody(ClientRequest clientRequest, HttpRequest.Builder requestBuilder) {
+        final CompletableFuture<HttpResponse<InputStream>> httpResponseCompletableFuture;
+        try (final PipedOutputStream pipedOutputStream = new PipedOutputStream();
+             final PipedInputStream pipedInputStream = new PipedInputStream(pipedOutputStream)
+        ) {
+            clientRequest.setStreamProvider(contentLength -> pipedOutputStream);
+            requestBuilder.method(clientRequest.getMethod(), HttpRequest.BodyPublishers.ofInputStream(() -> pipedInputStream));
+
+            httpResponseCompletableFuture = httpClient.sendAsync(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+
+            clientRequest.writeEntity();
+        } catch (IOException e) {
+            throw new ProcessingException("The sending process failed with I/O error, " + e.getMessage(), e);
+        }
+        return httpResponseCompletableFuture;
+    }
+
+    private HttpRequest.Builder toHttpClientRequestBuilder(ClientRequest clientRequest) {
+        final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+        // TODO handle changed headers after pushed of payload
+        clientRequest.getRequestHeaders()
+                .forEach((name, values) -> values.forEach(value -> requestBuilder.header(name, value)));
+        requestBuilder.uri(clientRequest.getUri());
+        final Object readTimeoutInMilliseconds = clientRequest.getConfiguration().getProperties().get(ClientProperties.READ_TIMEOUT);
+        if (isGreaterThanZero(readTimeoutInMilliseconds)) {
+            requestBuilder.timeout(Duration.of((Integer) readTimeoutInMilliseconds, ChronoUnit.MILLIS));
+        }
+        return requestBuilder;
     }
 
     @Override
