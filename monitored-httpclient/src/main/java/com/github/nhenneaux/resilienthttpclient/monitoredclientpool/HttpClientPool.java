@@ -6,6 +6,7 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpC
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
+import java.security.KeyStore;
 import java.security.Security;
 import java.util.List;
 import java.util.Optional;
@@ -33,14 +34,18 @@ public class HttpClientPool {
     private final HttpClient singleHostnameClient;
 
 
-    HttpClientPool(
+    public HttpClientPool(
             final DnsLookupWrapper dnsLookupWrapper,
             final ScheduledExecutorService scheduledExecutorService,
             final ServerConfiguration serverConfiguration
     ) {
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null);
+    }
+
+    public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
-        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname());
+        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore);
 
         checkDnsCacheSecurityProperties();
 
