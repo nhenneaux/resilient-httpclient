@@ -45,13 +45,18 @@ public class SingleHostHttpClientProvider {
     }
 
     public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore) {
+        final HttpClient.Builder builder = HttpClient.newBuilder();
+        return buildSingleHostnameHttpClient(hostname, trustStore, builder);
+    }
+
+    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
 
         final HttpClient client;
         Properties props = System.getProperties();
         final String previousDisable = (String) props.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
         try {
-            client = HttpClient.newBuilder()
+            client = builder
                     .sslContext(sslContextForSingleHostname)
                     .build();
         } finally {
