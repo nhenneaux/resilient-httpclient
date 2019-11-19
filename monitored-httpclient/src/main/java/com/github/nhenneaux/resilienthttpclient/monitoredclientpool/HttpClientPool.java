@@ -148,7 +148,11 @@ public class HttpClientPool {
      * Please note that it uses a round robin internally. So once it reaches the end of the list it starts returning items from the beginning and so on.
      */
     public Optional<HttpClientWithHealth> getNextHttpClient() {
-        return httpClientsCache.get().next();
+        return client().next();
+    }
+
+    private GenericRoundRobinListWithHealthCheck<HttpClientWithHealth> client() {
+        return Optional.ofNullable(httpClientsCache.get()).orElse(EMPTY);
     }
 
     /**
@@ -157,7 +161,7 @@ public class HttpClientPool {
      * Returns status {@link HealthStatus#WARNING} if only some httpClientsCache are healthy.<br>
      */
     public HealthCheckResult check() {
-        final List<HttpClientWithHealth> clients = Optional.ofNullable(httpClientsCache.get()).orElse(EMPTY).getList();
+        final List<HttpClientWithHealth> clients = client().getList();
         LOGGER.log(Level.FINE, () -> "Check HTTP clients pool for health connection(s): " + clients);
         final boolean allConnectionsAvailable = clients.stream().allMatch(HttpClientWithHealth::isHealthy);
         final boolean allConnectionsUnavailable = clients.stream().noneMatch(HttpClientWithHealth::isHealthy);
