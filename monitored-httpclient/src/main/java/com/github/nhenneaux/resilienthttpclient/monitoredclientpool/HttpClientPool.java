@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.KeyStore;
 import java.security.Security;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class HttpClientPool {
 
     private static final Logger LOGGER = Logger.getLogger(HttpClientPool.class.getSimpleName());
+    static final GenericRoundRobinListWithHealthCheck<HttpClientWithHealth> EMPTY = new GenericRoundRobinListWithHealthCheck<>(Collections.emptyList());
 
 
     private final AtomicReference<GenericRoundRobinListWithHealthCheck<HttpClientWithHealth>> httpClientsCache;
@@ -155,7 +157,7 @@ public class HttpClientPool {
      * Returns status {@link HealthStatus#WARNING} if only some httpClientsCache are healthy.<br>
      */
     public HealthCheckResult check() {
-        final List<HttpClientWithHealth> clients = httpClientsCache.get().getList();
+        final List<HttpClientWithHealth> clients = Optional.ofNullable(httpClientsCache.get()).orElse(EMPTY).getList();
         LOGGER.log(Level.FINE, () -> "Check HTTP clients pool for health connection(s): " + clients);
         final boolean allConnectionsAvailable = clients.stream().allMatch(HttpClientWithHealth::isHealthy);
         final boolean allConnectionsUnavailable = clients.stream().noneMatch(HttpClientWithHealth::isHealthy);
