@@ -179,5 +179,9 @@
             <name>Nicolas Henneaux</name>
             <email>nicolas.henneaux@gmail.com</email>
         </developer>
+        <developer>
+            <name>Andrey Lebedev</name>
+            <email>andremoniy@gmail.com</email>
+        </developer>
     </developers>
 </project>
