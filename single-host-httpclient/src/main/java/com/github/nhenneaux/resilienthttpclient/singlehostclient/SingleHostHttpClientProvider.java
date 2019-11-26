@@ -29,7 +29,7 @@ import static java.util.stream.Collectors.joining;
 
 
 /**
- * Create an {@link HttpClient} to target a single host.
+ * Create an {@link HttpClient} to target a single host with HTTP 1.1 protocol version.
  * It validates the certificate to authenticate the server in TLS communication with this single name.
  * It can be used to target a single host using its IP address(es) instead of its hostname while keeping a high protection against Man-in-the-middle attack.
  */
@@ -50,6 +50,7 @@ public class SingleHostHttpClientProvider {
     }
 
     public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
+        builder.version(HttpClient.Version.HTTP_1_1);
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
 
         final HttpClient client;
