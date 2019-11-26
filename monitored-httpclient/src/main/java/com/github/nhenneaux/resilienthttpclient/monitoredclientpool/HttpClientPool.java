@@ -64,22 +64,19 @@ public class HttpClientPool {
     }
 
     private void checkDnsCacheSecurityProperties() {
-        final String networkAddressCacheTtl = Security.getProperty("networkaddress.cache.ttl");
-        final String networkAddressCacheNegativeTtl = Security.getProperty("networkaddress.cache.negative.ttl");
+        // Default "networkaddress.cache.ttl" is 30 seconds, "-1" means cache forever
+        validateProperty("networkaddress.cache.ttl", 60);
+        // Default "networkaddress.cache.negative.ttl" is 10 seconds, "-1" means cache forever
+        validateProperty("networkaddress.cache.negative.ttl", 11);
+    }
 
-        if (networkAddressCacheTtl != null && !networkAddressCacheTtl.isEmpty()
-                && ("-1".equals(networkAddressCacheTtl) || Integer.parseInt(networkAddressCacheTtl) > 60)
+    private void validateProperty(String propertyName, int minimumPropertyValueExpected) {
+        final String propertyValue = Security.getProperty(propertyName);
+
+        if (propertyValue != null && !propertyValue.isEmpty()
+                && ("-1".equals(propertyValue) || Integer.parseInt(propertyValue) > minimumPropertyValueExpected)
         ) {
-            // "-1" means cache forever
-            // Default "networkaddress.cache.ttl" is 30 seconds
-            LOGGER.log(Level.SEVERE, () -> "The JVM Security property 'networkaddress.cache.ttl' is set to '" + networkAddressCacheTtl + "' while a value greater than '60' is expected.");
-        }
-        if (networkAddressCacheNegativeTtl != null && !networkAddressCacheNegativeTtl.isEmpty()
-                && ("-1".equals(networkAddressCacheNegativeTtl) || Integer.parseInt(networkAddressCacheNegativeTtl) > 11)
-        ) {
-            // "-1" means cache forever
-            // Default "networkaddress.cache.negative.ttl" is 10 seconds
-            LOGGER.log(Level.SEVERE, () -> "The JVM Security property 'networkaddress.cache.negative.ttl' is set to '" + networkAddressCacheNegativeTtl + "' while a value greater than '11' is expected.");
+            LOGGER.log(Level.SEVERE, () -> "The JVM Security property '" + propertyName + "' is set to '" + propertyValue + "' while a value greater than '" + minimumPropertyValueExpected + "' is expected.");
         }
     }
 
