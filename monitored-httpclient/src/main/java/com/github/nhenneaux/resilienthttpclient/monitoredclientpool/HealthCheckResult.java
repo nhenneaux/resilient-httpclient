@@ -24,4 +24,8 @@ public class HealthCheckResult {
                 ", details=" + details +
                 '}';
     }
+
+    public enum HealthStatus {
+        OK, WARNING, ERROR
+    }
 }

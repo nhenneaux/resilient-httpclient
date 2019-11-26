@@ -10,20 +10,22 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class HttpClientWithHealth implements ItemWithHealth {
-    private static final Logger LOGGER = Logger.getLogger(HttpClientWithHealth.class.getSimpleName());
+public class SingleIpHttpClient {
+    private static final Logger LOGGER = Logger.getLogger(SingleIpHttpClient.class.getSimpleName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
     private final URI healthUri;
 
-    public HttpClientWithHealth(HttpClient httpClient, InetAddress inetAddress, ServerConfiguration serverConfiguration) {
-        this.httpClient = httpClient;
-        this.inetAddress = inetAddress;
+    public SingleIpHttpClient(HttpClient httpClient, InetAddress inetAddress, ServerConfiguration serverConfiguration) {
+        Objects.requireNonNull(serverConfiguration);
+        this.httpClient = Objects.requireNonNull(httpClient);
+        this.inetAddress = Objects.requireNonNull(inetAddress);
         try {
             healthUri = new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
         } catch (URISyntaxException | MalformedURLException e) {
@@ -31,7 +33,9 @@ public class HttpClientWithHealth implements ItemWithHealth {
         }
     }
 
-    @Override
+    /**
+     * Determine whether this client is able to reach the given IP address through HTTP protocol and get a valid HTTP response, i.e. with status between 200 and 499.
+     */
     public boolean isHealthy() {
         final long start = System.nanoTime();
         try {
@@ -60,8 +64,24 @@ public class HttpClientWithHealth implements ItemWithHealth {
 
     @Override
     public String toString() {
-        return "HttpClientWithHealth{" +
-                "inetAddress=" + inetAddress +
+        return "SingleIpHttpClient{" +
+                ", inetAddress=" + inetAddress +
+                ", healthUri=" + healthUri +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SingleIpHttpClient that = (SingleIpHttpClient) o;
+        return httpClient.equals(that.httpClient) &&
+                inetAddress.equals(that.inetAddress) &&
+                healthUri.equals(that.healthUri);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(httpClient, inetAddress, healthUri);
     }
 }

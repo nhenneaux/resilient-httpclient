@@ -8,7 +8,6 @@ import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.KeyStore;
 import java.security.Security;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,10 +26,8 @@ import java.util.stream.Collectors;
 public class HttpClientPool {
 
     private static final Logger LOGGER = Logger.getLogger(HttpClientPool.class.getSimpleName());
-    static final GenericRoundRobinListWithHealthCheck<HttpClientWithHealth> EMPTY = new GenericRoundRobinListWithHealthCheck<>(Collections.emptyList());
 
-
-    private final AtomicReference<GenericRoundRobinListWithHealthCheck<HttpClientWithHealth>> httpClientsCache;
+    private final AtomicReference<RoundRobinPool> httpClientsCache;
 
     private final ServerConfiguration serverConfiguration;
     private final HttpClient singleHostnameClient;
@@ -90,9 +87,9 @@ public class HttpClientPool {
             final DnsLookupWrapper dnsLookupWrapper,
             final ServerConfiguration serverConfiguration
     ) {
-        final List<HttpClientWithHealth> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
+        final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
                 .map(roundRobin -> httpClientsCache.get())
-                .orElse(new GenericRoundRobinListWithHealthCheck<>(List.of()))
+                .orElse(RoundRobinPool.EMPTY)
                 .getList();
 
         final String hostname = serverConfiguration.getHostname();
@@ -112,7 +109,7 @@ public class HttpClientPool {
             }
         });
 
-        httpClientsCache.set(new GenericRoundRobinListWithHealthCheck<>(
+        httpClientsCache.set(new RoundRobinPool(
                 inetAddressesByDnsLookUp
                         .stream()
                         .map(inetAddress -> useOldClientOrCreateNew(
@@ -124,10 +121,10 @@ public class HttpClientPool {
         ));
     }
 
-    private HttpClientWithHealth useOldClientOrCreateNew(
+    private SingleIpHttpClient useOldClientOrCreateNew(
             final HttpClient httpClient,
             final InetAddress inetAddress,
-            final List<HttpClientWithHealth> oldListOfClients
+            final List<SingleIpHttpClient> oldListOfClients
     ) {
         // Try to find the client with the same inetAddress in the old list and reuse it or build a new one
         return oldListOfClients.stream()
@@ -135,7 +132,7 @@ public class HttpClientPool {
                 .findAny()
                 .orElseGet(() -> {
                     LOGGER.log(Level.INFO, () -> "New IP found: " + inetAddress.getHostAddress() + " for hostname " + serverConfiguration.getHostname() + ", creating a new HttpClient");
-                    return new HttpClientWithHealth(
+                    return new SingleIpHttpClient(
                             httpClient,
                             inetAddress,
                             serverConfiguration);
@@ -147,40 +144,40 @@ public class HttpClientPool {
      * Take the next HTTP client from the pool.<br>
      * Please note that it uses a round robin internally. So once it reaches the end of the list it starts returning items from the beginning and so on.
      */
-    public Optional<HttpClientWithHealth> getNextHttpClient() {
+    public Optional<SingleIpHttpClient> getNextHttpClient() {
         return client().next();
     }
 
-    private GenericRoundRobinListWithHealthCheck<HttpClientWithHealth> client() {
-        return Optional.ofNullable(httpClientsCache.get()).orElse(EMPTY);
+    private RoundRobinPool client() {
+        return Optional.ofNullable(httpClientsCache.get()).orElse(RoundRobinPool.EMPTY);
     }
 
     /**
-     * Returns status {@link HealthStatus#OK} if all httpClientsCache are healthy.<br>
-     * Returns status {@link HealthStatus#ERROR} if all httpClientsCache are unhealthy.<br>
-     * Returns status {@link HealthStatus#WARNING} if only some httpClientsCache are healthy.<br>
+     * Returns status {@link HealthCheckResult.HealthStatus#OK} if all httpClientsCache are healthy.<br>
+     * Returns status {@link HealthCheckResult.HealthStatus#ERROR} if all httpClientsCache are unhealthy.<br>
+     * Returns status {@link HealthCheckResult.HealthStatus#WARNING} if only some httpClientsCache are healthy.<br>
      */
     public HealthCheckResult check() {
-        final List<HttpClientWithHealth> clients = client().getList();
+        final List<SingleIpHttpClient> clients = client().getList();
         LOGGER.log(Level.FINE, () -> "Check HTTP clients pool for health connection(s): " + clients);
-        final boolean allConnectionsAvailable = clients.stream().allMatch(HttpClientWithHealth::isHealthy);
-        final boolean allConnectionsUnavailable = clients.stream().noneMatch(HttpClientWithHealth::isHealthy);
+        final boolean allConnectionsAvailable = clients.stream().allMatch(SingleIpHttpClient::isHealthy);
+        final boolean allConnectionsUnavailable = clients.stream().noneMatch(SingleIpHttpClient::isHealthy);
 
-        final HealthStatus status;
+        final HealthCheckResult.HealthStatus status;
 
         if (allConnectionsUnavailable) {
-            status = HealthStatus.ERROR;
+            status = HealthCheckResult.HealthStatus.ERROR;
         } else if (allConnectionsAvailable) {
-            status = HealthStatus.OK;
+            status = HealthCheckResult.HealthStatus.OK;
         } else {
-            status = HealthStatus.WARNING;
+            status = HealthCheckResult.HealthStatus.WARNING;
         }
         LOGGER.log(Level.FINE, () -> "HTTP clients pool health is " + status);
 
         return new HealthCheckResult(status,
                 clients
                         .stream()
-                        .map(HttpClientWithHealth::toString)
+                        .map(SingleIpHttpClient::toString)
                         .collect(Collectors.toList()));
     }
 

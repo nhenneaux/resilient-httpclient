@@ -4,8 +4,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ServerConfiguration {
 
-    private static final long DEFAULT_ACQUIRER_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
-
+    private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
 
     private final String hostname;
     private final int port;
@@ -15,7 +14,7 @@ public class ServerConfiguration {
 
 
     public ServerConfiguration(String hostname) {
-        this(hostname, 443, "", DEFAULT_ACQUIRER_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS);
+        this(hostname, 443, "", DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS);
     }
 
     public ServerConfiguration(String hostname, int port, String healthPath, long dnsLookupRefreshPeriodInSeconds) {

@@ -26,14 +26,14 @@ class HttpClientPoolTest {
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
-            final Optional<HttpClientWithHealth> nextHttpClient = httpClientPool.getNextHttpClient();
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
 
             assertTrue(nextHttpClient.isPresent(), httpClientPool::toString);
 
-            final HttpClientWithHealth httpClientWithHealth = nextHttpClient.orElseThrow();
-            final HttpClient httpClient = httpClientWithHealth.getHttpClient();
+            final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
+            final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", httpClientWithHealth.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
                             .build(),
                     HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
@@ -50,7 +50,7 @@ class HttpClientPoolTest {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
             final HealthCheckResult checkResult = httpClientPool.check();
-            assertThat(httpClientPool.toString(), checkResult.getStatus(), Matchers.oneOf(HealthStatus.OK, HealthStatus.WARNING));
+            assertThat(httpClientPool.toString(), checkResult.getStatus(), Matchers.oneOf(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING));
         }
     }
 }
