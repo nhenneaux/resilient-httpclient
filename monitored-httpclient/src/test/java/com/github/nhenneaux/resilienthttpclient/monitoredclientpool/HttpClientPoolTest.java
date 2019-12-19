@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-class HttpClientPoolCdiTest {
+class HttpClientPoolTest {
 
     @Test
     void getNextHttpClient() throws MalformedURLException, URISyntaxException {
