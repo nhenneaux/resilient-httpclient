@@ -11,8 +11,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -26,8 +27,16 @@ public class SingleIpHttpClient implements AutoCloseable {
     private final InetAddress inetAddress;
     private final URI healthUri;
     private final AtomicBoolean healthy;
-    private final ScheduledFuture<?> scheduledFuture;
+    private final Future<?> scheduledFuture;
 
+    /**
+     * Create a new instance of the client and schedule a task to refresh is healthyness.
+     *
+     * @param httpClient               the underlying HTTP client
+     * @param inetAddress              the target IP address
+     * @param serverConfiguration      the configuration of the server
+     * @param scheduledExecutorService the scheduled executor service to schedule the refresh.
+     */
     public SingleIpHttpClient(
             HttpClient httpClient,
             InetAddress inetAddress,
@@ -46,14 +55,38 @@ public class SingleIpHttpClient implements AutoCloseable {
         this.healthy = new AtomicBoolean();
 
         final long connectionHealthCheckPeriodInSeconds = serverConfiguration.getConnectionHealthCheckPeriodInSeconds();
-
         this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
                 this::checkHealthStatus,
                 0,
                 connectionHealthCheckPeriodInSeconds,
                 TimeUnit.SECONDS
         );
+    }
 
+    /**
+     * Create a new instance and check its health once.
+     *
+     * @param httpClient          the underlying HTTP client
+     * @param inetAddress         the target IP address
+     * @param serverConfiguration the configuration of the server
+     */
+    public SingleIpHttpClient(
+            HttpClient httpClient,
+            InetAddress inetAddress,
+            ServerConfiguration serverConfiguration
+    ) {
+        Objects.requireNonNull(serverConfiguration);
+        this.httpClient = Objects.requireNonNull(httpClient);
+        this.inetAddress = Objects.requireNonNull(inetAddress);
+        try {
+            healthUri = new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+        } catch (URISyntaxException | MalformedURLException e) {
+            throw new IllegalStateException("Cannot build health URI from " + serverConfiguration, e);
+        }
+
+        this.healthy = new AtomicBoolean();
+        this.scheduledFuture = CompletableFuture.completedFuture(null);
+        checkHealthStatus();
     }
 
     public boolean isHealthy() {

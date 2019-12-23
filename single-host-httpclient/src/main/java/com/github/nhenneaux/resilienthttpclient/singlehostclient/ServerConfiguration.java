@@ -11,7 +11,6 @@ public class ServerConfiguration {
     private final int port;
     private final String healthPath;
     private final long connectionHealthCheckPeriodInSeconds;
-
     private final long dnsLookupRefreshPeriodInSeconds;
 
 
@@ -27,20 +26,39 @@ public class ServerConfiguration {
         this.dnsLookupRefreshPeriodInSeconds = dnsLookupRefreshPeriodInSeconds;
     }
 
+    /**
+     * The hostname of the HTTP client.
+     */
     public String getHostname() {
         return hostname;
     }
 
+    /**
+     * THE TCP port of the HTTP client.
+     */
     public int getPort() {
         return port;
     }
 
+    /**
+     * Thea health path responding with HTTP code 2xx, 3xx, 4xx so that the client is considered healthy.
+     */
     public String getHealthPath() {
         return healthPath;
     }
 
+    /**
+     * The DNS delay in seconds to refresh the resolution of {@link #getHostname()}.
+     */
     public long getDnsLookupRefreshPeriodInSeconds() {
         return dnsLookupRefreshPeriodInSeconds;
+    }
+
+    /**
+     * The delay in seconds between health checks to {@link #getHealthPath()}.
+     */
+    public long getConnectionHealthCheckPeriodInSeconds() {
+        return connectionHealthCheckPeriodInSeconds;
     }
 
     @Override
@@ -49,11 +67,8 @@ public class ServerConfiguration {
                 "hostname='" + hostname + '\'' +
                 ", port=" + port +
                 ", healthPath='" + healthPath + '\'' +
+                ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
                 ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
                 '}';
-    }
-
-    public long getConnectionHealthCheckPeriodInSeconds() {
-        return connectionHealthCheckPeriodInSeconds;
     }
 }
