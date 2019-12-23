@@ -71,4 +71,8 @@ public class ServerConfiguration {
                 ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
                 '}';
     }
+
+    public long getConnectionHealthCheckPeriodInSeconds() {
+        return connectionHealthCheckPeriodInSeconds;
+    }
 }
