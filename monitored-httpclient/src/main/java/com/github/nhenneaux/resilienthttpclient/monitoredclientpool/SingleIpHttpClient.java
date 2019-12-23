@@ -11,18 +11,29 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Objects;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SingleIpHttpClient {
+public class SingleIpHttpClient implements AutoCloseable {
+
     private static final Logger LOGGER = Logger.getLogger(SingleIpHttpClient.class.getSimpleName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
     private final URI healthUri;
+    private final AtomicBoolean healthy;
+    private final ScheduledFuture<?> scheduledFuture;
 
-    public SingleIpHttpClient(HttpClient httpClient, InetAddress inetAddress, ServerConfiguration serverConfiguration) {
+    public SingleIpHttpClient(
+            HttpClient httpClient,
+            InetAddress inetAddress,
+            ServerConfiguration serverConfiguration,
+            ScheduledExecutorService scheduledExecutorService
+    ) {
         Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
@@ -31,12 +42,28 @@ public class SingleIpHttpClient {
         } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalStateException("Cannot build health URI from " + serverConfiguration, e);
         }
+
+        this.healthy = new AtomicBoolean();
+
+        final long connectionHealthCheckPeriodInSeconds = serverConfiguration.getConnectionHealthCheckPeriodInSeconds();
+
+        this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
+                this::checkHealthStatus,
+                0,
+                connectionHealthCheckPeriodInSeconds,
+                TimeUnit.SECONDS
+        );
+
+    }
+
+    public boolean isHealthy() {
+        return healthy.get();
     }
 
     /**
      * Determine whether this client is able to reach the given IP address through HTTP protocol and get a valid HTTP response, i.e. with status between 200 and 499.
      */
-    public boolean isHealthy() {
+    private void checkHealthStatus() {
         final long start = System.nanoTime();
         try {
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
@@ -47,10 +74,10 @@ public class SingleIpHttpClient {
                     .join();
 
             LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "` in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms.");
-            return statusCode >= 200 && statusCode <= 499;
+            healthy.set(statusCode >= 200 && statusCode <= 499);
         } catch (RuntimeException e) {
             LOGGER.log(Level.INFO, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`.");
-            return false;
+            healthy.set(false);
         }
     }
 
@@ -84,4 +111,10 @@ public class SingleIpHttpClient {
     public int hashCode() {
         return Objects.hash(httpClient, inetAddress, healthUri);
     }
+
+    @Override
+    public void close() {
+        scheduledFuture.cancel(true);
+    }
+
 }
