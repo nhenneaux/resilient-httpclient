@@ -13,10 +13,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HttpClientPoolTest {
 
@@ -25,11 +27,11 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
+            final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newScheduledThreadPool(4), serverConfiguration);
+
+            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+
             final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
-
-            assertTrue(nextHttpClient.isPresent(), httpClientPool::toString);
-
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
@@ -42,15 +44,18 @@ class HttpClientPoolTest {
         }
     }
 
-
     @Test
     void check() {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
-            final HealthCheckResult checkResult = httpClientPool.check();
-            assertThat(httpClientPool.toString(), checkResult.getStatus(), Matchers.oneOf(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING));
+            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
+                    () -> {
+                        final HealthCheckResult checkResult = httpClientPool.check();
+                        return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
+                    }
+            );
         }
     }
 }
