@@ -35,11 +35,11 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::statusCode)
-                    .join();
+                    .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                    .build(),
+                HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::statusCode)
+                .join();
             assertThat(statusCode, Matchers.allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
     }
@@ -51,10 +51,10 @@ class HttpClientPoolTest {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
-                    () -> {
-                        final HealthCheckResult checkResult = httpClientPool.check();
-                        return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
-                    }
+                () -> {
+                    final HealthCheckResult checkResult = httpClientPool.check();
+                    return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
+                }
             );
         }
     }
