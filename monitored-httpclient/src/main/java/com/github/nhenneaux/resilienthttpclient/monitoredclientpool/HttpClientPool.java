@@ -22,8 +22,7 @@ import java.util.stream.Collectors;
  * Each HTTP client represents a connection to the acquirer using a distinct IP address, taken from endpoint resolving.<br>
  * The number of distinct HTTP clients in this connection pool is equal to the number of different IP addresses for the given acquirer hostname.
  */
-@SuppressWarnings("WeakerAccess")
-public class HttpClientPool {
+public class HttpClientPool implements AutoCloseable {
 
     private static final Logger LOGGER = Logger.getLogger(HttpClientPool.class.getSimpleName());
 
@@ -31,7 +30,7 @@ public class HttpClientPool {
 
     private final ServerConfiguration serverConfiguration;
     private final HttpClient singleHostnameClient;
-
+    private final ScheduledExecutorService scheduledExecutorService;
 
     public HttpClientPool(
             final DnsLookupWrapper dnsLookupWrapper,
@@ -41,10 +40,16 @@ public class HttpClientPool {
         this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null);
     }
 
-    public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore) {
+    public HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration,
+            final KeyStore trustStore
+    ) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
         this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore);
+        this.scheduledExecutorService = scheduledExecutorService;
 
         checkDnsCacheSecurityProperties();
 
@@ -132,7 +137,9 @@ public class HttpClientPool {
                     return new SingleIpHttpClient(
                             httpClient,
                             inetAddress,
-                            serverConfiguration);
+                            serverConfiguration,
+                            scheduledExecutorService
+                    );
                 });
     }
 
@@ -185,5 +192,10 @@ public class HttpClientPool {
                 ", serverConfiguration=" + serverConfiguration +
                 ", singleHostnameClient=" + singleHostnameClient +
                 '}';
+    }
+
+    @Override
+    public void close() {
+        client().getList().forEach(SingleIpHttpClient::close);
     }
 }
