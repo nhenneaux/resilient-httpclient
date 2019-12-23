@@ -72,7 +72,4 @@ public class ServerConfiguration {
                 '}';
     }
 
-    public long getConnectionHealthCheckPeriodInSeconds() {
-        return connectionHealthCheckPeriodInSeconds;
-    }
 }
