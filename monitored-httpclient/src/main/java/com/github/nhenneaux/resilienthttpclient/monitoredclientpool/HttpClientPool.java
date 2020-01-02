@@ -48,9 +48,13 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder());
+    }
+
+    public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore, HttpClient.Builder builder) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
-        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore);
+        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore, builder);
         this.scheduledExecutorService = scheduledExecutorService;
 
         checkDnsCacheSecurityProperties();
