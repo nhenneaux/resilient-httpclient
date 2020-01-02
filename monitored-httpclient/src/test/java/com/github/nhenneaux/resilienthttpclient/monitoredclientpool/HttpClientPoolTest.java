@@ -73,8 +73,10 @@ class HttpClientPoolTest {
         final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, Executors.newScheduledThreadPool(4), serverConfiguration);
 
         assertTrue(httpClientPool.getNextHttpClient().isEmpty());
-        assertEquals(List.of(), httpClientPool.check().getDetails());
-        assertEquals(HealthCheckResult.HealthStatus.ERROR, httpClientPool.check().getStatus());
+        final HealthCheckResult check = httpClientPool.check();
+        assertEquals(List.of(), check.getDetails());
+        assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
+        assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
         assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300}}", httpClientPool.toString());
 
     }
