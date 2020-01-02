@@ -32,7 +32,7 @@ public class SingleIpHttpClient implements AutoCloseable {
     private final Future<?> scheduledFuture;
 
     /**
-     * Create a new instance of the client and schedule a task to refresh is healthyness.
+     * Create a new instance of the client and schedule a task to refresh is healthiness.
      *
      * @param httpClient               the underlying HTTP client
      * @param inetAddress              the target IP address
@@ -130,21 +130,6 @@ public class SingleIpHttpClient implements AutoCloseable {
                 ", inetAddress=" + inetAddress +
                 ", healthUri=" + healthUri +
                 '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SingleIpHttpClient that = (SingleIpHttpClient) o;
-        return httpClient.equals(that.httpClient) &&
-                inetAddress.equals(that.inetAddress) &&
-                healthUri.equals(that.healthUri);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(httpClient, inetAddress, healthUri);
     }
 
     @Override

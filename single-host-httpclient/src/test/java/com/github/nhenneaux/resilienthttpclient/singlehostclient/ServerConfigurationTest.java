@@ -35,6 +35,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(555L, serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         Assertions.assertEquals(444L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
         Assertions.assertEquals(1234, serverConfiguration.getPort());
+        Assertions.assertEquals("ServerConfiguration{hostname='hostname', port=1234, healthPath='/health', connectionHealthCheckPeriodInSeconds=555, dnsLookupRefreshPeriodInSeconds=444}", serverConfiguration.toString());
     }
 
 

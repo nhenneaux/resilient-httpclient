@@ -19,6 +19,9 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class HttpClientPoolTest {
 
@@ -27,21 +30,35 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newScheduledThreadPool(4), serverConfiguration);
+            try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newScheduledThreadPool(4), serverConfiguration)) {
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
-            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
-
-            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
-            final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
-            final HttpClient httpClient = singleIpHttpClient.getHttpClient();
-            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                    .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                    .build(),
-                HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::statusCode)
-                .join();
-            assertThat(statusCode, Matchers.allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+                final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+                final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
+                final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString())
+                        .thenApply(HttpResponse::statusCode)
+                        .join();
+                assertThat(statusCode, Matchers.allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
         }
+    }
+
+    @Test
+    void getNextHttpClientNotFound() {
+        final String hostname = "not.found.host";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, Executors.newScheduledThreadPool(4), serverConfiguration);
+
+        assertTrue(httpClientPool.getNextHttpClient().isEmpty());
+        assertEquals(List.of(), httpClientPool.check().getDetails());
+        assertEquals(HealthCheckResult.HealthStatus.ERROR, httpClientPool.check().getStatus());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300}}", httpClientPool.toString());
+
     }
 
     @Test
@@ -49,13 +66,14 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
-            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
-                () -> {
-                    final HealthCheckResult checkResult = httpClientPool.check();
-                    return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
-                }
-            );
+            try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration)) {
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
+                        () -> {
+                            final HealthCheckResult checkResult = httpClientPool.check();
+                            return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
+                        }
+                );
+            }
         }
     }
 }

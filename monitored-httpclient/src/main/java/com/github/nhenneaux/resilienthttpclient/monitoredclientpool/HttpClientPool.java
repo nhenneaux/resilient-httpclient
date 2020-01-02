@@ -11,6 +11,7 @@ import java.security.Security;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -31,6 +32,7 @@ public class HttpClientPool implements AutoCloseable {
     private final ServerConfiguration serverConfiguration;
     private final HttpClient singleHostnameClient;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final ScheduledFuture<?> scheduledFutureDnsRefresh;
 
     public HttpClientPool(
             final DnsLookupWrapper dnsLookupWrapper,
@@ -60,7 +62,7 @@ public class HttpClientPool implements AutoCloseable {
         // HttpClients for which the ip has disappeared will be closed
         // For the new IPs new Http clients will be created
         final long dnsLookupRefreshPeriodInSeconds = serverConfiguration.getDnsLookupRefreshPeriodInSeconds();
-        scheduledExecutorService.scheduleAtFixedRate(
+        this.scheduledFutureDnsRefresh = scheduledExecutorService.scheduleAtFixedRate(
                 () -> refreshTheList(dnsLookupWrapper, serverConfiguration),
                 dnsLookupRefreshPeriodInSeconds,
                 dnsLookupRefreshPeriodInSeconds,
@@ -190,12 +192,12 @@ public class HttpClientPool implements AutoCloseable {
         return "HttpClientPool{" +
                 "httpClientsCache=" + httpClientsCache +
                 ", serverConfiguration=" + serverConfiguration +
-                ", singleHostnameClient=" + singleHostnameClient +
                 '}';
     }
 
     @Override
     public void close() {
+        scheduledFutureDnsRefresh.cancel(true);
         client().getList().forEach(SingleIpHttpClient::close);
     }
 }
