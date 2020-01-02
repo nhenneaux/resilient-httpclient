@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -42,8 +44,24 @@ class HttpClientPoolTest {
                         HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
                         .join();
-                assertThat(statusCode, Matchers.allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
+        }
+    }
+
+    @Test
+    void shouldReturnToString() {
+        var hostname = "google.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newScheduledThreadPool(4), serverConfiguration)) {
+
+
+            assertTrue(httpClientPool.getNextHttpClient().isEmpty());
+            assertThat(httpClientPool.check().getDetails().toString(), containsString("SingleIpHttpClient{inetAddress=google.com"));
+            assertEquals(HealthCheckResult.HealthStatus.ERROR, httpClientPool.check().getStatus());
+
+            assertThat(httpClientPool.toString(),
+                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=-1}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300}}")));
         }
     }
 
