@@ -46,11 +46,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        try {
-            healthUri = new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
-        } catch (URISyntaxException | MalformedURLException e) {
-            throw new IllegalStateException("Cannot build health URI from " + serverConfiguration, e);
-        }
+        this.healthUri = healthUri(inetAddress, serverConfiguration);
 
         this.healthy = new AtomicBoolean();
 
@@ -78,15 +74,19 @@ public class SingleIpHttpClient implements AutoCloseable {
         Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        try {
-            healthUri = new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
-        } catch (URISyntaxException | MalformedURLException e) {
-            throw new IllegalStateException("Cannot build health URI from " + serverConfiguration, e);
-        }
+        this.healthUri = healthUri(inetAddress, serverConfiguration);
 
         this.healthy = new AtomicBoolean();
         this.scheduledFuture = CompletableFuture.completedFuture(null);
         checkHealthStatus();
+    }
+
+    private URI healthUri(InetAddress inetAddress, ServerConfiguration serverConfiguration) {
+        try {
+            return new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+        } catch (URISyntaxException | MalformedURLException e) {
+            throw new IllegalStateException("Cannot build health URI from " + serverConfiguration, e);
+        }
     }
 
     public boolean isHealthy() {
