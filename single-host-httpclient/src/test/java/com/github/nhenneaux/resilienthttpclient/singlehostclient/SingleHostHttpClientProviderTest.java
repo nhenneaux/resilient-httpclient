@@ -3,6 +3,7 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -54,7 +55,7 @@ class SingleHostHttpClientProviderTest {
 
         // Then
         assertEquals("Cannot perform a DNS lookup for the hostname: notfound.unit.", illegalStateException.getMessage());
-        assertEquals("notfound.unit: nodename nor servname provided, or not known", illegalStateException.getCause().getMessage());
+        assertEquals(UnknownHostException.class, illegalStateException.getCause().getClass());
     }
 
     @Test
