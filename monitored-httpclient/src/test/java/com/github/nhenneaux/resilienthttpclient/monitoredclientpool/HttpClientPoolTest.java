@@ -114,8 +114,15 @@ class HttpClientPoolTest {
     }
 
     @Test
+    void validatePropertyEmpty() {
+        final String key = "validatePropertyEmpty";
+        Security.setProperty(key, "");
+        assertTrue(HttpClientPool.validateProperty(key, 10));
+    }
+
+    @Test
     void validatePropertyHigherThanBound() {
-        final String key = "validatePropertyLowerThanBound";
+        final String key = "validatePropertyHigherThanBound";
         Security.setProperty(key, "11");
         assertFalse(HttpClientPool.validateProperty(key, 10));
     }
