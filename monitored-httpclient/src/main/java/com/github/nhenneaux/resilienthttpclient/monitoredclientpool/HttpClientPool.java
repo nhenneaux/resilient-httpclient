@@ -81,14 +81,16 @@ public class HttpClientPool implements AutoCloseable {
         validateProperty("networkaddress.cache.negative.ttl", 11);
     }
 
-    private void validateProperty(String propertyName, int minimumPropertyValueExpected) {
+    static boolean validateProperty(String propertyName, int minimumPropertyValueExpected) {
         final String propertyValue = Security.getProperty(propertyName);
 
         if (propertyValue != null && !propertyValue.isEmpty()
                 && ("-1".equals(propertyValue) || Integer.parseInt(propertyValue) > minimumPropertyValueExpected)
         ) {
             LOGGER.log(Level.SEVERE, () -> "The JVM Security property '" + propertyName + "' is set to '" + propertyValue + "' while a value greater than '" + minimumPropertyValueExpected + "' is expected.");
+            return false;
         }
+        return true;
     }
 
     private void refreshTheList(

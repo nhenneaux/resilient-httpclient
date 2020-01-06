@@ -11,6 +11,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.Security;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -95,5 +97,26 @@ class HttpClientPoolTest {
                 );
             }
         }
+    }
+
+    @Test
+    void validatePropertyMinus1() {
+        final String key = "validatePropertyMinus1";
+        Security.setProperty(key, "-1");
+        assertFalse(HttpClientPool.validateProperty(key, 10));
+    }
+
+    @Test
+    void validatePropertyLowerThanBound() {
+        final String key = "validatePropertyLowerThanBound";
+        Security.setProperty(key, "5");
+        assertTrue(HttpClientPool.validateProperty(key, 10));
+    }
+
+    @Test
+    void validatePropertyHigherThanBound() {
+        final String key = "validatePropertyLowerThanBound";
+        Security.setProperty(key, "11");
+        assertFalse(HttpClientPool.validateProperty(key, 10));
     }
 }
