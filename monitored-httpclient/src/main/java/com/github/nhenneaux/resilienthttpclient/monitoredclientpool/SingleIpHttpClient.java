@@ -96,7 +96,7 @@ public class SingleIpHttpClient implements AutoCloseable {
     /**
      * Determine whether this client is able to reach the given IP address through HTTP protocol and get a valid HTTP response, i.e. with status between 200 and 499.
      */
-    private void checkHealthStatus() {
+    void checkHealthStatus() {
         final long start = System.nanoTime();
         try {
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()

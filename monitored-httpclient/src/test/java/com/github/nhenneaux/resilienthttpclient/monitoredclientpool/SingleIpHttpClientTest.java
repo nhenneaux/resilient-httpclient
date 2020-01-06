@@ -3,23 +3,41 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SingleIpHttpClientTest {
+    @SuppressWarnings("unchecked")
+    private static final Class<HttpResponse.BodyHandler<String>> STRING_BODY_HANDLER_CLASS = (Class<HttpResponse.BodyHandler<String>>) HttpResponse.BodyHandlers.ofString().getClass();
+
+    @BeforeAll
+    static void initValidHttpClient() {
+        final String hostname = "cloudflare.com";
+        //noinspection EmptyTryBlock
+        try (final SingleIpHttpClient ignored = new SingleIpHttpClient(new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+            // Nothing to do
+        }
+    }
 
     @Test
     void shouldBeHealthyWithOneRefresh() {
-        System.out.println(System.getProperty("jdk.internal.httpclient.disableHostnameVerification"));
         // Given
         final String hostname = "cloudflare.com";
         final HttpClient httpClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
@@ -31,10 +49,43 @@ class SingleIpHttpClientTest {
         }
     }
 
+    @Test
+    void shouldBeUnHealthyWith500Status() {
+        // Given
+        final String hostname = "cloudflare.com";
+        final HttpClient httpClient = mock(HttpClient.class);
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(500);
+        when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        // When
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+            // Then
+            assertSame(httpClient, singleIpHttpClient.getHttpClient());
+            assertFalse(singleIpHttpClient.isHealthy());
+        }
+    }
+
+    @Test
+    void shouldBeUnHealthyWith100Status() {
+        // Given
+        final String hostname = "cloudflare.com";
+        final HttpClient httpClient = mock(HttpClient.class);
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(100);
+        when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        // When
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+            // Then
+            assertSame(httpClient, singleIpHttpClient.getHttpClient());
+            assertFalse(singleIpHttpClient.isHealthy());
+        }
+    }
+
 
     @Test
     void shouldBeUnhealthyWithInvalidAddress() throws UnknownHostException {
-        System.out.println(System.getProperty("jdk.internal.httpclient.disableHostnameVerification"));
         // Given
         // When
         final HttpClient httpClient = HttpClient.newHttpClient();
