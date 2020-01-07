@@ -39,13 +39,7 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>report</id>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
+                        <id>report-aggregate</id>
                         <goals>
                             <goal>report-aggregate</goal>
                         </goals>
