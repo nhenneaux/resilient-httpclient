@@ -10,7 +10,8 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Properties;
+
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider.RethrowNoSuchAlgorithmException.handleNoSuchAlgorithmException;
 
 
 /**
@@ -37,17 +38,16 @@ public class SingleHostHttpClientProvider {
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
 
         final HttpClient client;
-        Properties props = System.getProperties();
-        final String previousDisable = (String) props.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
+        final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
         try {
             client = builder
                     .sslContext(sslContextForSingleHostname)
                     .build();
         } finally {
             if (previousDisable == null) {
-                props.remove(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION);
+                System.clearProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION);
             } else {
-                props.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
+                System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
             }
         }
         return client;
@@ -56,13 +56,8 @@ public class SingleHostHttpClientProvider {
     private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
         final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
 
+        final SSLContext sslContextForSingleHostname = handleNoSuchAlgorithmException(() -> SSLContext.getInstance("TLS"));
 
-        final SSLContext sslContextForSingleHostname;
-        try {
-            sslContextForSingleHostname = SSLContext.getInstance("TLS");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
         try {
             sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom());
         } catch (KeyManagementException e) {
@@ -72,12 +67,8 @@ public class SingleHostHttpClientProvider {
     }
 
     private TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
-        final TrustManagerFactory instance;
-        try {
-            instance = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        final TrustManagerFactory instance = handleNoSuchAlgorithmException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
+
         try {
             instance.init(truststore);
         } catch (KeyStoreException e) {
@@ -88,6 +79,18 @@ public class SingleHostHttpClientProvider {
         return new TrustManager[]{
                 new SingleHostnameX509TrustManager(trustManager, hostname)
         };
+    }
+
+    interface RethrowNoSuchAlgorithmException<T> {
+        static <T> T handleNoSuchAlgorithmException(RethrowNoSuchAlgorithmException<T> operation) {
+            try {
+                return operation.run();
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        T run() throws NoSuchAlgorithmException;
     }
 
 
