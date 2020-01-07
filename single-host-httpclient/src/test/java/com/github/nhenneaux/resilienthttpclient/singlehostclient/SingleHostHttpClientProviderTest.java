@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientProviderTest {
@@ -242,4 +244,13 @@ class SingleHostHttpClientProviderTest {
     }
 
 
+    @Test
+    void shouldHandleNoSuchAlgorithm() {
+        final NoSuchAlgorithmException noSuchAlgorithmException = new NoSuchAlgorithmException();
+        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleHostHttpClientProvider.RethrowNoSuchAlgorithmException.handleNoSuchAlgorithmException(() -> {
+            throw noSuchAlgorithmException;
+        }));
+
+        assertSame(noSuchAlgorithmException, illegalStateException.getCause());
+    }
 }
