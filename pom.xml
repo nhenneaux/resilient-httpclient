@@ -19,7 +19,7 @@
 
         <skipRelease>true</skipRelease>
 
-        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/../path_to_module_with_report/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/../target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <modules>
         <module>single-host-httpclient</module>
@@ -39,11 +39,10 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>report-aggregate</id>
+                        <id>report</id>
                         <goals>
-                            <goal>report-aggregate</goal>
+                            <goal>report</goal>
                         </goals>
-                        <phase>verify</phase>
                     </execution>
                 </executions>
             </plugin>

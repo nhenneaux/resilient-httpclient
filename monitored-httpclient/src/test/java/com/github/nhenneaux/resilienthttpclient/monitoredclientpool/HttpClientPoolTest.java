@@ -131,6 +131,7 @@ class HttpClientPoolTest {
         verify(scheduledFuture).cancel(true);
     }
 
+
     @Test
     void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
         // Given
@@ -157,8 +158,8 @@ class HttpClientPoolTest {
         });
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        //noinspection unchecked
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(InetAddress.getByName(hostname)), Set.of());
+
+        mockDns(dnsLookupWrapper, InetAddress.getByName(hostname), Set.of());
         // When
         try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
             // Then
@@ -167,6 +168,11 @@ class HttpClientPoolTest {
 
         verify(scheduledDnsRefreshFuture).cancel(true);
         verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mockDns(DnsLookupWrapper dnsLookupWrapper, InetAddress byName, Set<InetAddress> of) {
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp("openjdk.java.net")).thenReturn(Set.of(byName), of);
     }
 
 
@@ -199,8 +205,8 @@ class HttpClientPoolTest {
         final InetAddress secondAddress = mock(InetAddress.class);
         when(secondAddress.getHostAddress()).thenReturn("10.0.0.255");
         final InetAddress firstAddress = InetAddress.getByName(hostname);
-        //noinspection unchecked
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress), Set.of(secondAddress));
+
+        mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
         // When
         try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
             // Then
@@ -240,8 +246,8 @@ class HttpClientPoolTest {
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress secondAddress = mock(InetAddress.class);
         final InetAddress firstAddress = InetAddress.getByName(hostname);
-        //noinspection unchecked
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress), Set.of(secondAddress));
+
+        mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
         // When
         try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
             fail();
@@ -284,10 +290,14 @@ class HttpClientPoolTest {
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(500)))) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
             @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(5)).getHostAddress();
+
+            await()
+                    .atMost(Duration.ofSeconds(2L))
+                    .until(() -> httpClientPool.check().getStatus() == HealthCheckResult.HealthStatus.WARNING);
 
             assertEquals(HealthCheckResult.HealthStatus.WARNING, httpClientPool.check().getStatus());
         }
