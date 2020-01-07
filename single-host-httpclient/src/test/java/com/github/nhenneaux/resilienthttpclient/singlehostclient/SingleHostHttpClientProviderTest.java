@@ -247,7 +247,7 @@ class SingleHostHttpClientProviderTest {
     @Test
     void shouldHandleNoSuchAlgorithm() {
         final NoSuchAlgorithmException noSuchAlgorithmException = new NoSuchAlgorithmException();
-        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleHostHttpClientProvider.RethrowNoSuchAlgorithmException.handleNoSuchAlgorithmException(() -> {
+        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleHostHttpClientProvider.RethrowGeneralSecurityException.handleGeneralSecurityException(() -> {
             throw noSuchAlgorithmException;
         }));
 
