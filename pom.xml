@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
