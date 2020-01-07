@@ -287,10 +287,11 @@ class HttpClientPoolTest {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
             @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(5)).getHostAddress();
-            verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
+
             assertEquals(HealthCheckResult.HealthStatus.WARNING, httpClientPool.check().getStatus());
         }
-
+        verify(scheduledHealthSingleClientRefreshFuture, times(2)).cancel(true);
+        verify(scheduledDnsRefreshFuture).cancel(true);
     }
 
     @Test
