@@ -5,13 +5,11 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.net.http.HttpClient;
-import java.security.KeyManagementException;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
-import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider.RethrowNoSuchAlgorithmException.handleNoSuchAlgorithmException;
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider.RethrowGeneralSecurityException.handleGeneralSecurityException;
 
 
 /**
@@ -56,24 +54,17 @@ public class SingleHostHttpClientProvider {
     private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
         final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
 
-        final SSLContext sslContextForSingleHostname = handleNoSuchAlgorithmException(() -> SSLContext.getInstance("TLS"));
+        final SSLContext sslContextForSingleHostname = handleGeneralSecurityException(() -> SSLContext.getInstance("TLS"));
 
-        try {
-            sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom());
-        } catch (KeyManagementException e) {
-            throw new IllegalStateException(e);
-        }
+        handleGeneralSecurityException(() -> sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom()));
         return sslContextForSingleHostname;
     }
 
     private TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
-        final TrustManagerFactory instance = handleNoSuchAlgorithmException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
+        final TrustManagerFactory instance = handleGeneralSecurityException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
 
-        try {
-            instance.init(truststore);
-        } catch (KeyStoreException e) {
-            throw new IllegalStateException(e);
-        }
+        handleGeneralSecurityException(() -> instance.init(truststore));
+
         var trustManagers = instance.getTrustManagers();
         var trustManager = (X509TrustManager) trustManagers[0];
         return new TrustManager[]{
@@ -81,16 +72,32 @@ public class SingleHostHttpClientProvider {
         };
     }
 
-    interface RethrowNoSuchAlgorithmException<T> {
-        static <T> T handleNoSuchAlgorithmException(RethrowNoSuchAlgorithmException<T> operation) {
+    interface RethrowGeneralSecurityException<T> {
+        static <T> T handleGeneralSecurityException(RethrowGeneralSecurityException<T> operation) {
             try {
                 return operation.run();
-            } catch (NoSuchAlgorithmException e) {
+            } catch (GeneralSecurityException e) {
                 throw new IllegalStateException(e);
             }
         }
 
-        T run() throws NoSuchAlgorithmException;
+        static void handleGeneralSecurityException(RethrowVoidGeneralSecurityException operation) {
+            handleGeneralSecurityException(() -> {
+                operation.run();
+                return null;
+            });
+        }
+
+        T run() throws GeneralSecurityException;
+
+
+    }
+
+    interface RethrowVoidGeneralSecurityException {
+
+        void run() throws GeneralSecurityException;
+
+
     }
 
 
