@@ -18,8 +18,6 @@
         <maven.compiler.target>11</maven.compiler.target>
 
         <skipRelease>true</skipRelease>
-
-        <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/../target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <modules>
         <module>single-host-httpclient</module>
