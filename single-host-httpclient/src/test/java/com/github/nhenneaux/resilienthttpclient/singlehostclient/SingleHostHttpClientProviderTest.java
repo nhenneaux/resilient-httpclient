@@ -1,7 +1,9 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
@@ -10,8 +12,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,6 +50,94 @@ class SingleHostHttpClientProviderTest {
     }
 
     @Test
+    void shouldValidateWrongHost() {
+        // Given
+        String hostname = "wrong.host.badssl.com";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join());
+        // Then
+        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+    }
+
+    @Test
+    void shouldValidateWith1000SAN() {
+        // Given
+        String hostname = "1000-sans.badssl.com";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join());
+        // Then
+        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+    }
+
+    @Test
+    void shouldValidateNoSubject() {
+        // Given
+        String hostname = "no-subject.badssl.com";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join());
+        // Then
+        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+    }
+
+    @Test
+    void shouldValidateNoCommonName() {
+        // Given
+        String hostname = "no-common-name.badssl.com";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join());
+        // Then
+        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+    }
+
+    @Test
     void unknownHost() {
         // Given
         final String hostname = "notfound.unit";
@@ -74,12 +166,12 @@ class SingleHostHttpClientProviderTest {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("java.net.http.HttpConnectTimeoutException: HTTP connect timed out", executionException.getMessage());
+        assertThat(executionException.getMessage(), Matchers.anyOf(Matchers.equalTo("java.net.http.HttpConnectTimeoutException: HTTP connect timed out"), Matchers.equalTo("java.net.ConnectException: Connection refused")));
     }
 
     @Test
-    void noHttpServer() {
-        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient("no.http.server", null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(200)));
+    void noSubjectAlternativeName() {
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient("no.http.server", null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(1_000)));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://1.1.1.1"))
@@ -93,6 +185,31 @@ class SingleHostHttpClientProviderTest {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("java.net.http.HttpConnectTimeoutException: HTTP connect timed out", executionException.getMessage());
+        assertEquals("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.", executionException.getMessage());
     }
+
+    @Test
+    void noHttpsServer() {
+        // Given
+        String hostname = "http.badssl.com";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+        // When
+        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body);
+
+
+        // Then
+        final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
+        assertEquals("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", executionException.getMessage());
+    }
+
+
 }
