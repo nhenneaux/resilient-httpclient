@@ -60,8 +60,6 @@ public class HttpClientPool implements AutoCloseable {
 
         final HttpClient singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore, builder);
 
-        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService);
-
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
         // HttpClients for which the ip has disappeared will be closed
@@ -73,6 +71,8 @@ public class HttpClientPool implements AutoCloseable {
                 dnsLookupRefreshPeriodInSeconds,
                 TimeUnit.SECONDS
         );
+
+        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService);
     }
 
     static boolean validateProperty(String propertyName, int minimumPropertyValueExpected) {
