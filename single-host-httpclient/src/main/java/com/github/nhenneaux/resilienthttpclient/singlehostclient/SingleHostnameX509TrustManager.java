@@ -47,7 +47,7 @@ public class SingleHostnameX509TrustManager implements X509TrustManager {
      * <p>
      * Inspired from sun.security.util.HostnameChecker#matchDNS(java.lang.String, java.security.cert.X509Certificate, boolean)
      */
-    private static void matchDNS(String expectedName, X509Certificate cert)
+    static void matchDNS(String expectedName, X509Certificate cert)
             throws CertificateException {
         // Check that the expected name is a valid domain name.
         try {
@@ -72,16 +72,14 @@ public class SingleHostnameX509TrustManager implements X509TrustManager {
             if (foundDNS) {
                 // if certificate contains any subject alt names of type DNS
                 // but none match, reject
-                throw new CertificateException("No subject alternative DNS "
-                        + "name matching " + expectedName + " found.");
+                throw new CertificateException("No subject alternative DNS name matching " + expectedName + " found.");
             }
         }
         final String subject = getSubject(cert);
         if (subject != null && isMatched(expectedName, subject)) {
             return;
         }
-        String msg = "No name matching " + expectedName + " found";
-        throw new CertificateException(msg);
+        throw new CertificateException("No name matching " + expectedName + " found");
     }
 
     private static String getSubject(X509Certificate leaf) {
