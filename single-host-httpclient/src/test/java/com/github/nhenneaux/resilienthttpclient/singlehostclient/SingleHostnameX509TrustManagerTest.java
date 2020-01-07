@@ -16,6 +16,7 @@ class SingleHostnameX509TrustManagerTest {
 
     static final String HOSTNAME = "SingleHostnameX509TrustManager.nhenneaux.github.com";
 
+    @SuppressWarnings("squid:S2699")
     @Test
     void shouldMatchDnsWithoutSan() throws CertificateException, IOException {
         final X509Certificate cer = loadCertificateWithoutSan();
