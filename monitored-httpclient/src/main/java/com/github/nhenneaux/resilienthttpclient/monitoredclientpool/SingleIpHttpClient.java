@@ -53,7 +53,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         final long connectionHealthCheckPeriodInSeconds = serverConfiguration.getConnectionHealthCheckPeriodInSeconds();
         this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
                 this::checkHealthStatus,
-                0,
+                0L,
                 connectionHealthCheckPeriodInSeconds,
                 TimeUnit.SECONDS
         );

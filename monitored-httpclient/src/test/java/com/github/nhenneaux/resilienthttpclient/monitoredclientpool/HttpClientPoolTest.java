@@ -5,9 +5,11 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfigura
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
@@ -25,7 +29,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class HttpClientPoolTest {
 
@@ -34,7 +44,7 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newScheduledThreadPool(4), serverConfiguration)) {
+            try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration)) {
                 await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
                 final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
@@ -72,7 +82,7 @@ class HttpClientPoolTest {
         final String hostname = "not.found.host";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, Executors.newScheduledThreadPool(4), serverConfiguration);
+        final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, Executors.newSingleThreadScheduledExecutor(), serverConfiguration);
 
         assertTrue(httpClientPool.getNextHttpClient().isEmpty());
         final HealthCheckResult check = httpClientPool.check();
@@ -97,6 +107,150 @@ class HttpClientPoolTest {
                 );
             }
         }
+    }
+
+    @Test
+    void scheduleRefresh() {
+        // Given
+        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.java.net");
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final ScheduledFuture<?> scheduledFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledFuture;
+        });
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        // When
+        try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
+            // Then
+            verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
+        }
+
+        verify(scheduledFuture).cancel(true);
+    }
+
+    @Test
+    void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
+        // Given
+        final String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledDnsRefreshFuture;
+        });
+
+        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(
+                any(Runnable.class),
+                eq(0L),
+                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
+                eq(TimeUnit.SECONDS)
+        )).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledHealthSingleClientRefreshFuture;
+        });
+
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        //noinspection unchecked
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(InetAddress.getByName(hostname)), Set.of());
+        // When
+        try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
+            // Then
+            verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
+        }
+
+        verify(scheduledDnsRefreshFuture).cancel(true);
+        verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Test
+    void updatePreviousListWhenNewLookupResult() throws UnknownHostException {
+        // Given
+        final String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledDnsRefreshFuture;
+        });
+
+        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(
+                any(Runnable.class),
+                eq(0L),
+                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
+                eq(TimeUnit.SECONDS)
+        )).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledHealthSingleClientRefreshFuture;
+        });
+
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        final InetAddress secondAddress = mock(InetAddress.class);
+        when(secondAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress firstAddress = InetAddress.getByName(hostname);
+        //noinspection unchecked
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress), Set.of(secondAddress));
+        // When
+        try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
+            // Then
+            verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
+            verify(secondAddress, times(3)).getHostAddress();
+            verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
+        }
+
+        verify(scheduledDnsRefreshFuture).cancel(true);
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Test
+    void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
+        // Given
+        final String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledDnsRefreshFuture;
+        });
+
+        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(
+                any(Runnable.class),
+                eq(0L),
+                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
+                eq(TimeUnit.SECONDS)
+        )).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledHealthSingleClientRefreshFuture;
+        });
+
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        final InetAddress secondAddress = mock(InetAddress.class);
+        final InetAddress firstAddress = InetAddress.getByName(hostname);
+        //noinspection unchecked
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress), Set.of(secondAddress));
+        // When
+        try (final HttpClientPool ignored = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
+            fail();
+        } catch (IllegalStateException expected) {
+            assertEquals("Cannot build health URI from ServerConfiguration{hostname='openjdk.java.net', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300}", expected.getMessage());
+        }
+        // Then
+        verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
+        verify(secondAddress, times(3)).getHostAddress();
     }
 
     @Test

@@ -31,7 +31,7 @@ class SingleIpHttpClientTest {
     static void initValidHttpClient() {
         final String hostname = "cloudflare.com";
         //noinspection EmptyTryBlock
-        try (final SingleIpHttpClient ignored = new SingleIpHttpClient(new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+        try (final SingleIpHttpClient ignored = new SingleIpHttpClient(new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Nothing to do
         }
     }
@@ -42,7 +42,7 @@ class SingleIpHttpClientTest {
         final String hostname = "cloudflare.com";
         final HttpClient httpClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
         // When
-        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertTrue(singleIpHttpClient.isHealthy());
@@ -59,7 +59,7 @@ class SingleIpHttpClientTest {
         when(httpResponse.statusCode()).thenReturn(500);
         when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
         // When
-        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertFalse(singleIpHttpClient.isHealthy());
@@ -76,7 +76,7 @@ class SingleIpHttpClientTest {
         when(httpResponse.statusCode()).thenReturn(100);
         when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
         // When
-        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0), new ServerConfiguration(hostname))) {
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertFalse(singleIpHttpClient.isHealthy());

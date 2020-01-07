@@ -10,6 +10,7 @@ import java.security.KeyStore;
 import java.security.Security;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +18,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import static java.util.function.Predicate.not;
 
 /**
  * A HTTP clients pool which keeps internally a round robin list of HTTP clients.<br>
@@ -30,8 +33,6 @@ public class HttpClientPool implements AutoCloseable {
     private final AtomicReference<RoundRobinPool> httpClientsCache;
 
     private final ServerConfiguration serverConfiguration;
-    private final HttpClient singleHostnameClient;
-    private final ScheduledExecutorService scheduledExecutorService;
     private final ScheduledFuture<?> scheduledFutureDnsRefresh;
 
     public HttpClientPool(
@@ -54,12 +55,12 @@ public class HttpClientPool implements AutoCloseable {
     public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore, HttpClient.Builder builder) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
-        this.singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore, builder);
-        this.scheduledExecutorService = scheduledExecutorService;
 
         checkDnsCacheSecurityProperties();
 
-        refreshTheList(dnsLookupWrapper, serverConfiguration);
+        final HttpClient singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore, builder);
+
+        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService);
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
@@ -67,18 +68,11 @@ public class HttpClientPool implements AutoCloseable {
         // For the new IPs new Http clients will be created
         final long dnsLookupRefreshPeriodInSeconds = serverConfiguration.getDnsLookupRefreshPeriodInSeconds();
         this.scheduledFutureDnsRefresh = scheduledExecutorService.scheduleAtFixedRate(
-                () -> refreshTheList(dnsLookupWrapper, serverConfiguration),
+                () -> refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService),
                 dnsLookupRefreshPeriodInSeconds,
                 dnsLookupRefreshPeriodInSeconds,
                 TimeUnit.SECONDS
         );
-    }
-
-    private void checkDnsCacheSecurityProperties() {
-        // Default "networkaddress.cache.ttl" is 30 seconds, "-1" means cache forever
-        validateProperty("networkaddress.cache.ttl", 60);
-        // Default "networkaddress.cache.negative.ttl" is 10 seconds, "-1" means cache forever
-        validateProperty("networkaddress.cache.negative.ttl", 11);
     }
 
     static boolean validateProperty(String propertyName, int minimumPropertyValueExpected) {
@@ -93,9 +87,12 @@ public class HttpClientPool implements AutoCloseable {
         return true;
     }
 
-    private void refreshTheList(
+    private static void refreshTheList(
             final DnsLookupWrapper dnsLookupWrapper,
-            final ServerConfiguration serverConfiguration
+            final ServerConfiguration serverConfiguration,
+            final AtomicReference<RoundRobinPool> httpClientsCache,
+            final HttpClient singleHostnameClient,
+            final ScheduledExecutorService scheduledExecutorService
     ) {
         final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
                 .map(roundRobin -> httpClientsCache.get())
@@ -104,37 +101,45 @@ public class HttpClientPool implements AutoCloseable {
 
         final String hostname = serverConfiguration.getHostname();
 
-        final List<InetAddress> inetAddressesByDnsLookUp = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
-        if (inetAddressesByDnsLookUp.isEmpty()) {
-            LOGGER.log(Level.WARNING, "The DNS lookup has returned an empty list of IPs. Reusing the old list.");
+        final Set<InetAddress> updatedLookup = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        if (updatedLookup.isEmpty()) {
+            if (oldListOfClients.isEmpty()) {
+                LOGGER.log(Level.SEVERE, "The DNS lookup has returned an empty list of IPs. There is no client in the pool.");
+            } else {
+                LOGGER.log(Level.WARNING, "The DNS lookup has returned an empty list of IPs. Reusing the old list.");
+            }
             return;
         }
 
-        // Close those clients whose inet address is not present any more
-        oldListOfClients.forEach(oldClient -> {
-            final boolean inetAddressIsNotPresent = inetAddressesByDnsLookUp.stream().filter(inetAddress -> inetAddress.getHostAddress().equals(oldClient.getInetAddress().getHostAddress()))
-                    .findAny().isEmpty();
-            if (inetAddressIsNotPresent) {
-                LOGGER.log(Level.INFO, () -> "The IP " + oldClient.getInetAddress().getHostAddress() + " for hostname " + serverConfiguration.getHostname() + " is not present in the DNS resolution list any more, closing the HttpClient");
-            }
-        });
 
         httpClientsCache.set(new RoundRobinPool(
-                inetAddressesByDnsLookUp
+                updatedLookup
                         .stream()
                         .map(inetAddress -> useOldClientOrCreateNew(
                                 singleHostnameClient,
                                 inetAddress,
-                                oldListOfClients
+                                oldListOfClients,
+                                serverConfiguration,
+                                scheduledExecutorService
                         ))
                         .collect(Collectors.toUnmodifiableList())
         ));
+
+        // Close those clients whose inet address is not present anymore
+        oldListOfClients.stream()
+                .filter(not(client -> updatedLookup.contains(client.getInetAddress())))
+                .forEach(oldClient -> {
+                    LOGGER.log(Level.INFO, () -> "The IP " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " is not present in the DNS resolution list any more, closing the HttpClient");
+                    oldClient.close();
+                });
     }
 
-    private SingleIpHttpClient useOldClientOrCreateNew(
+    private static SingleIpHttpClient useOldClientOrCreateNew(
             final HttpClient httpClient,
             final InetAddress inetAddress,
-            final List<SingleIpHttpClient> oldListOfClients
+            final List<SingleIpHttpClient> oldListOfClients,
+            final ServerConfiguration serverConfiguration,
+            final ScheduledExecutorService scheduledExecutorService
     ) {
         // Try to find the client with the same inetAddress in the old list and reuse it or build a new one
         return oldListOfClients.stream()
@@ -149,6 +154,13 @@ public class HttpClientPool implements AutoCloseable {
                             scheduledExecutorService
                     );
                 });
+    }
+
+    private void checkDnsCacheSecurityProperties() {
+        // Default "networkaddress.cache.ttl" is 30 seconds, "-1" means cache forever
+        validateProperty("networkaddress.cache.ttl", 60);
+        // Default "networkaddress.cache.negative.ttl" is 10 seconds, "-1" means cache forever
+        validateProperty("networkaddress.cache.negative.ttl", 11);
     }
 
 

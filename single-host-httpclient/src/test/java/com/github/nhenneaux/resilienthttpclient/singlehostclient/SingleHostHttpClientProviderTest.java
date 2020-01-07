@@ -23,7 +23,7 @@ class SingleHostHttpClientProviderTest {
         // Given
         final List<String> hosts = List.of("openjdk.java.net", "travis-ci.com", "github.com", "facebook.com");
         for (String hostname : hosts) {
-            final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).get(0).getHostAddress();
+            final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
             final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
 
