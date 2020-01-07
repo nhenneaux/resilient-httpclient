@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.Security;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -283,7 +284,7 @@ class HttpClientPoolTest {
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration)) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(500)))) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
             @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(5)).getHostAddress();
