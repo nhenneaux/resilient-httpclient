@@ -2,7 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
-import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -28,14 +28,14 @@ class SingleIpHttpClientTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-        new SingleHostHttpClientProvider().buildSingleHostnameHttpClient("test");
+        SingleHostHttpClientBuilder.build("test");
     }
 
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
         final String hostname = "cloudflare.com";
-        final HttpClient httpClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+        final HttpClient httpClient = SingleHostHttpClientBuilder.build(hostname);
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
