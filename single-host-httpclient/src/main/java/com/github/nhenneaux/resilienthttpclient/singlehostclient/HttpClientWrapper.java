@@ -76,17 +76,17 @@ class HttpClientWrapper extends HttpClient {
 
     @Override
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
-        return httpClient.send(new HttpRequestWrapper(request, hostname), responseBodyHandler);
+        return httpClient.send(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler);
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
-        return httpClient.sendAsync(new HttpRequestWrapper(request, hostname), responseBodyHandler);
+        return httpClient.sendAsync(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler);
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler, HttpResponse.PushPromiseHandler<T> pushPromiseHandler) {
-        return httpClient.sendAsync(new HttpRequestWrapper(request, hostname), responseBodyHandler, pushPromiseHandler);
+        return httpClient.sendAsync(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler, pushPromiseHandler);
     }
 
     @Override
@@ -94,11 +94,11 @@ class HttpClientWrapper extends HttpClient {
         return httpClient.newWebSocketBuilder();
     }
 
-    private static class HttpRequestWrapper extends HttpRequest {
+    static class HttpRequestWithHostHeader extends HttpRequest {
         private final HttpRequest httpRequest;
         private final HttpHeaders headers;
 
-        private HttpRequestWrapper(HttpRequest httpRequest, String hostname) {
+        HttpRequestWithHostHeader(HttpRequest httpRequest, String hostname) {
             this.httpRequest = httpRequest;
             final Map<String, List<String>> map = new HashMap<>(httpRequest.headers().map());
             map.put("host ", List.of(hostname));
