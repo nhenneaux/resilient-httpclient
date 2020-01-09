@@ -50,6 +50,31 @@ class SingleHostHttpClientProviderTest {
     }
 
     @Test
+    void shouldTestWithSni() {
+        // Given
+        // Domain is not working when sni is not working correctly
+        final var hostname = "24max.de";
+        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
+
+        final HttpClient client = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+
+    }
+
+    @Test
     void shouldResetPropertyForHostnameVerification() {
         // Given
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
