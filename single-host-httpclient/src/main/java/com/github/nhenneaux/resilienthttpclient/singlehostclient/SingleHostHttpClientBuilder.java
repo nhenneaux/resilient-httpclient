@@ -35,7 +35,7 @@ public class SingleHostHttpClientBuilder {
     }
 
     public static SingleHostHttpClientBuilder builder(String hostname) {
-        return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
+        return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)));
     }
 
     public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {

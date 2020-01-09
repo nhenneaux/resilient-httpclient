@@ -50,7 +50,7 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)));
     }
 
     public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore, HttpClient.Builder builder) {
