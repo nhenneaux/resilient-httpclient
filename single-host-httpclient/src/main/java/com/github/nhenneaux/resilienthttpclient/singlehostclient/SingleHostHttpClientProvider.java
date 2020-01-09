@@ -68,7 +68,7 @@ public class SingleHostHttpClientProvider {
     private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
         final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
 
-        final SSLContext sslContextForSingleHostname = handleGeneralSecurityException(() -> SSLContext.getInstance("TLS"));
+        final SSLContext sslContextForSingleHostname = handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3"));
 
         handleGeneralSecurityException(() -> sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom()));
         return sslContextForSingleHostname;
