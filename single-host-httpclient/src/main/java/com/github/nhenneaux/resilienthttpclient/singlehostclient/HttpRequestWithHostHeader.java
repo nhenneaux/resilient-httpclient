@@ -16,9 +16,9 @@ class HttpRequestWithHostHeader extends HttpRequest {
 
     HttpRequestWithHostHeader(HttpRequest httpRequest, String hostname) {
         this.httpRequest = httpRequest;
-        final Map<String, List<String>> map = new HashMap<>(httpRequest.headers().map());
-        map.put("host", List.of(hostname));
-        this.headers = HttpHeaders.of(map, (s, s2) -> true);
+        final Map<String, List<String>> headerMap = new HashMap<>(httpRequest.headers().map());
+        headerMap.put("host", List.of(hostname));
+        this.headers = HttpHeaders.of(headerMap, (s, s2) -> true);
 
     }
 
