@@ -22,9 +22,11 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
  * It validates the certificate to authenticate the server in TLS communication with this single name.
  * It can be used to target a single host using its IP address(es) instead of its hostname while keeping a high protection against Man-in-the-middle attack.
  */
-@SuppressWarnings("WeakerAccess") // To use outside the module
+@SuppressWarnings({"WeakerAccess", "unused"}) // To use outside the module
 public class SingleHostHttpClientBuilder {
-    private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
+
+    public static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
+
 
     private final String hostname;
     private final HttpClient.Builder builder;
@@ -51,7 +53,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname) {
         return builder(hostname)
                 .withTlsNameMatching()
-                //TODO.withSni()
+                .withSni()
                 .buildWithHostHeader();
     }
 
@@ -69,7 +71,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname, HttpClient.Builder builder) {
         return builder(hostname, builder)
                 .withTlsNameMatching()
-                //TODO.withSni()
+                .withSni()
                 .buildWithHostHeader();
     }
 
@@ -87,7 +89,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
         return builder(hostname, builder)
                 .withTlsNameMatching(trustStore)
-                //TODO.withSni()
+                .withSni()
                 .buildWithHostHeader();
     }
 

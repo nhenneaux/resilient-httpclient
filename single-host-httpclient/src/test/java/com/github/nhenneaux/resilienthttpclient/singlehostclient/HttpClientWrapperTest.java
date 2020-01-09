@@ -10,14 +10,13 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder.JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 class HttpClientWrapperTest {
-
     static {
-        // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.builder("test").withTlsNameMatching().build();
+        System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
     }
 
     @Test
