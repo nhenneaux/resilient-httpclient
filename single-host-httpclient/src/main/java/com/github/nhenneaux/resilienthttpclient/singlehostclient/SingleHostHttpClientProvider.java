@@ -20,6 +20,14 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 @SuppressWarnings("WeakerAccess") // To use outside the module
 public class SingleHostHttpClientProvider {
 
+    /*
+     * Override host header in the HTTP request so that it can be used for routing on server side.
+     */
+    static {
+        if (getVersion() >= 13) {
+            System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");
+        }
+    }
 
     private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
 
@@ -32,9 +40,24 @@ public class SingleHostHttpClientProvider {
         return buildSingleHostnameHttpClient(hostname, trustStore, builder);
     }
 
-    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
-        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
+    private static int getVersion() {
+        final String version = System.getProperty("java.version");
+        if (version.startsWith("1.")) {
+            return Integer.parseInt(version.substring(2, 3));
+        }
 
+        int dot = version.indexOf('.');
+        if (dot != -1) {
+            return Integer.parseInt(version.substring(0, dot));
+        }
+
+        return Integer.parseInt(version);
+    }
+
+    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
+
+
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
         final HttpClient client;
         final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
         try {
@@ -48,8 +71,12 @@ public class SingleHostHttpClientProvider {
                 System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
             }
         }
+        if (getVersion() >= 13) {
+            return new HttpClientWrapper(client, hostname);
+        }
         return client;
     }
+
 
     private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
         final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
