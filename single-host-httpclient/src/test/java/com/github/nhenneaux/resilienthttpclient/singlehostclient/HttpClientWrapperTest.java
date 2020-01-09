@@ -15,6 +15,10 @@ import static org.mockito.Mockito.verify;
 
 class HttpClientWrapperTest {
 
+    static {
+        // Force init of the client without hostname check, otherwise it is cached
+        SingleHostHttpClientBuilder.build("test");
+    }
 
     @Test
     void send() throws IOException, InterruptedException {
