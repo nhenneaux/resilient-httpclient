@@ -23,6 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderTest {
+    static {
+        // Force properties
+        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", HttpRequestWithHostHeader.HOST_HEADER);
+    }
 
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
