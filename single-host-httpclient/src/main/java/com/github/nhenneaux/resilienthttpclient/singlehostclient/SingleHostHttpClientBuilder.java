@@ -25,8 +25,13 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 @SuppressWarnings({"WeakerAccess", "unused"}) // To use outside the module
 public class SingleHostHttpClientBuilder {
 
-    public static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
-
+    static {
+        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        /*
+         * Override host header in the HTTP request so that it can be used for routing on server side. Only supported in Java 13+.
+         */
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", HttpRequestWithHostHeader.HOST_HEADER);
+    }
 
     private final String hostname;
     private final HttpClient.Builder builder;
@@ -100,7 +105,7 @@ public class SingleHostHttpClientBuilder {
         return initialSslContext;
     }
 
-    static Optional<Runtime.Version> isJava13OrHigher() {
+    private static Optional<Runtime.Version> isJava13OrHigher() {
         return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
     }
 
@@ -139,10 +144,6 @@ public class SingleHostHttpClientBuilder {
      * Build a client with HTTP header host overridden in Java 13+
      */
     public HttpClient buildWithHostHeader() {
-        /*
-         * Override host header in the HTTP request so that it can be used for routing on server side.
-         */
-        isJava13OrHigher().ifPresent(ignored -> System.setProperty("jdk.httpclient.allowRestrictedHeaders", HttpRequestWithHostHeader.HOST_HEADER));
         HttpClient client = builder.build();
         return isJava13OrHigher()
                 .map(ignored -> new HttpClientWrapper(client, hostname))
@@ -156,16 +157,7 @@ public class SingleHostHttpClientBuilder {
 
     SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
-        final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
-        try {
-            builder.sslContext(sslContextForSingleHostname);
-        } finally {
-            if (previousDisable == null) {
-                System.clearProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION);
-            } else {
-                System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
-            }
-        }
+        builder.sslContext(sslContextForSingleHostname);
         return this;
     }
 

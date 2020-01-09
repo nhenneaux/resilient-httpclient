@@ -74,37 +74,6 @@ class SingleHostHttpClientBuilderTest {
 
     }
 
-    @Test
-    void shouldResetPropertyForHostnameVerification() {
-        // Given
-        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
-        try {
-
-            var hostname = "openjdk.java.net";
-            final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
-
-            final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
-
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://" + ip))
-                    .build();
-
-
-            // When
-            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            // Then
-            assertNotNull(response);
-            assertEquals(Boolean.TRUE.toString(), System.getProperty("jdk.internal.httpclient.disableHostnameVerification"));
-        } finally {
-
-            System.clearProperty("jdk.internal.httpclient.disableHostnameVerification");
-        }
-
-    }
 
     @Test
     void shouldValidateWrongHost() {
