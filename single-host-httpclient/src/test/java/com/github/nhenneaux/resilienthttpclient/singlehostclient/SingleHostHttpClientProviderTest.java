@@ -27,7 +27,7 @@ class SingleHostHttpClientProviderTest {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
         // Given
-        final List<String> hosts = List.of("openjdk.java.net", "travis-ci.com", "github.com", "facebook.com");
+        final List<String> hosts = List.of("openjdk.java.net", "travis-ci.com", "github.com", "facebook.com", "amazon.com", "google.com");
         for (String hostname : hosts) {
             final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
