@@ -11,13 +11,16 @@ import java.util.Map;
 import java.util.Optional;
 
 class HttpRequestWithHostHeader extends HttpRequest {
+
+    static final String HOST_HEADER = "host";
+
     private final HttpRequest httpRequest;
     private final HttpHeaders headers;
 
     HttpRequestWithHostHeader(HttpRequest httpRequest, String hostname) {
         this.httpRequest = httpRequest;
         final Map<String, List<String>> headerMap = new HashMap<>(httpRequest.headers().map());
-        headerMap.put("host", List.of(hostname));
+        headerMap.put(HOST_HEADER, List.of(hostname));
         this.headers = HttpHeaders.of(headerMap, (s, s2) -> true);
 
     }
