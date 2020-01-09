@@ -148,18 +148,20 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <version>2.22.2</version>
-                    <configuration>
-                        <trimStackTrace>false</trimStackTrace>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.22.2</version>
                     <configuration>
                         <trimStackTrace>false</trimStackTrace>
+                        <systemProperties>
+                            <property>
+                                <name>jdk.internal.httpclient.disableHostnameVerification</name>
+                                <value>true</value>
+                            </property>
+                            <property>
+                                <name>jdk.httpclient.allowRestrictedHeaders</name>
+                                <value>Host</value>
+                            </property>
+                        </systemProperties>
                     </configuration>
                 </plugin>
             </plugins>

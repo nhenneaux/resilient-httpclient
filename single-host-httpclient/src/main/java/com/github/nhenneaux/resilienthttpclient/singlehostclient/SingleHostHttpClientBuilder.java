@@ -21,17 +21,13 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
  * Create an {@link HttpClient} to target a single host.
  * It validates the certificate to authenticate the server in TLS communication with this single name.
  * It can be used to target a single host using its IP address(es) instead of its hostname while keeping a high protection against Man-in-the-middle attack.
+ * <p>
+ * <code>-Djdk.internal.httpclient.disableHostnameVerification</code> is needed to use a custom TLS name matching based on the requested host instead of the one from the URL.
+ * <p>
+ * <code>-Djdk.httpclient.allowRestrictedHeaders=Host</code> is needed to customize the HTTP Host header.
  */
 @SuppressWarnings({"WeakerAccess", "unused"}) // To use outside the module
 public class SingleHostHttpClientBuilder {
-
-    static {
-        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
-        /*
-         * Override host header in the HTTP request so that it can be used for routing on server side. Only supported in Java 13+.
-         */
-        System.setProperty("jdk.httpclient.allowRestrictedHeaders", HttpRequestWithHostHeader.HOST_HEADER);
-    }
 
     private final String hostname;
     private final HttpClient.Builder builder;
