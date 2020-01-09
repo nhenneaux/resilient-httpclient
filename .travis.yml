@@ -4,6 +4,10 @@ jdk:
   - openjdk12
   - openjdk13
 sudo: false # faster builds
+cache:
+  directories:
+    - .autoconf
+    - $HOME/.m2
 
 addons:
   sonarcloud:

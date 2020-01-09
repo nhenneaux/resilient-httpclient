@@ -23,10 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderTest {
-    static {
-        // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.build("test");
-    }
 
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
