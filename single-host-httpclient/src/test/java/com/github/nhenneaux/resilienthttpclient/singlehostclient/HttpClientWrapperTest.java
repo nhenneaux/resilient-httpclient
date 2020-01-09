@@ -28,7 +28,7 @@ class HttpClientWrapperTest {
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientWrapperTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
         httpClientWrapper.send(httpRequest, bodyHandler);
-        verify(httpClient).send(new HttpClientWrapper.HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler);
+        verify(httpClient).send(new HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler);
 
     }
 
@@ -40,7 +40,7 @@ class HttpClientWrapperTest {
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientWrapperTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
         httpClientWrapper.sendAsync(httpRequest, bodyHandler);
-        verify(httpClient).sendAsync(new HttpClientWrapper.HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler);
+        verify(httpClient).sendAsync(new HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler);
     }
 
     @Test
@@ -52,7 +52,7 @@ class HttpClientWrapperTest {
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
         final HttpResponse.PushPromiseHandler<Void> pushPromiseHandler = HttpResponse.PushPromiseHandler.of(request -> bodyHandler, new ConcurrentHashMap<>());
         httpClientWrapper.sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
-        verify(httpClient).sendAsync(new HttpClientWrapper.HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler, pushPromiseHandler);
+        verify(httpClient).sendAsync(new HttpRequestWithHostHeader(httpRequest, hostname), bodyHandler, pushPromiseHandler);
     }
 
 

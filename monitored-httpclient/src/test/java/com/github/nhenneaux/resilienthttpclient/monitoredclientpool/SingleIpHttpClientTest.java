@@ -3,7 +3,6 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -27,13 +26,9 @@ class SingleIpHttpClientTest {
     @SuppressWarnings("unchecked")
     private static final Class<HttpResponse.BodyHandler<String>> STRING_BODY_HANDLER_CLASS = (Class<HttpResponse.BodyHandler<String>>) HttpResponse.BodyHandlers.ofString().getClass();
 
-    @BeforeAll
-    static void initValidHttpClient() {
-        final String hostname = "cloudflare.com";
-        //noinspection EmptyTryBlock
-        try (final SingleIpHttpClient ignored = new SingleIpHttpClient(new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(hostname), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
-            // Nothing to do
-        }
+    static {
+        // Force init of the client without hostname check, otherwise it is cached
+        new SingleHostHttpClientProvider().buildSingleHostnameHttpClient("test");
     }
 
     @Test
