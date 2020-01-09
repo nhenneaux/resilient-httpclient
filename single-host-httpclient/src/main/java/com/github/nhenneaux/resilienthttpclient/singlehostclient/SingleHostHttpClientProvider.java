@@ -25,10 +25,10 @@ public class SingleHostHttpClientProvider {
      * Override host header in the HTTP request so that it can be used for routing on server side.
      */
     static {
-        isJava13().ifPresent(ignored -> System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host"));
+        isJava13OrHigher().ifPresent(ignored -> System.setProperty("jdk.httpclient.allowRestrictedHeaders", HttpRequestWithHostHeader.HOST_HEADER));
     }
 
-    static Optional<Runtime.Version> isJava13() {
+    static Optional<Runtime.Version> isJava13OrHigher() {
         return Optional.of(Runtime.version())
                 .filter(version -> version.feature() >= 13);
     }
@@ -59,7 +59,7 @@ public class SingleHostHttpClientProvider {
                 System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
             }
         }
-        return isJava13().
+        return isJava13OrHigher().
                 map(ignored -> new HttpClientWrapper(client, hostname))
                 .map(HttpClient.class::cast)
                 .orElse(client);
