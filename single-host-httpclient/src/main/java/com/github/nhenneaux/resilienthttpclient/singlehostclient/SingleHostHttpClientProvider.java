@@ -24,6 +24,7 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 @SuppressWarnings("WeakerAccess") // To use outside the module
 public class SingleHostHttpClientProvider {
 
+    private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
 
     /*
      * Override host header in the HTTP request so that it can be used for routing on server side.
@@ -34,17 +35,6 @@ public class SingleHostHttpClientProvider {
 
     static Optional<Runtime.Version> isJava13OrHigher() {
         return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
-    }
-    private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
-
-
-    public HttpClient buildSingleHostnameHttpClient(String hostname) {
-        return buildSingleHostnameHttpClient(hostname, null);
-    }
-
-    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore) {
-        final HttpClient.Builder builder = HttpClient.newBuilder();
-        return buildSingleHostnameHttpClient(hostname, trustStore, builder);
     }
 
     public static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
@@ -67,6 +57,16 @@ public class SingleHostHttpClientProvider {
                 new SingleHostnameX509TrustManager(trustManager, hostname)
         };
     }
+
+    public HttpClient buildSingleHostnameHttpClient(String hostname) {
+        return buildSingleHostnameHttpClient(hostname, null);
+    }
+
+    public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore) {
+        final HttpClient.Builder builder = HttpClient.newBuilder();
+        return buildSingleHostnameHttpClient(hostname, trustStore, builder);
+    }
+
 
     /**
      * Build a single hostname client. It overrides the following elements of the builder
