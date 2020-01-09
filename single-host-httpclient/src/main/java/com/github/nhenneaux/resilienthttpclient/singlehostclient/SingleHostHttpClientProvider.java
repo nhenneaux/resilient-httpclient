@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.util.Optional;
 
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider.RethrowGeneralSecurityException.handleGeneralSecurityException;
 
@@ -20,6 +21,17 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 @SuppressWarnings("WeakerAccess") // To use outside the module
 public class SingleHostHttpClientProvider {
 
+    /*
+     * Override host header in the HTTP request so that it can be used for routing on server side.
+     */
+    static {
+        isJava13().ifPresent(ignored -> System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host"));
+    }
+
+    static Optional<Runtime.Version> isJava13() {
+        return Optional.of(Runtime.version())
+                .filter(version -> version.feature() >= 13);
+    }
 
     private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
 
@@ -34,7 +46,6 @@ public class SingleHostHttpClientProvider {
 
     public HttpClient buildSingleHostnameHttpClient(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
-
         final HttpClient client;
         final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
         try {
@@ -48,7 +59,10 @@ public class SingleHostHttpClientProvider {
                 System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
             }
         }
-        return client;
+        return isJava13().
+                map(ignored -> new HttpClientWrapper(client, hostname))
+                .map(HttpClient.class::cast)
+                .orElse(client);
     }
 
     private SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
@@ -89,15 +103,11 @@ public class SingleHostHttpClientProvider {
         }
 
         T run() throws GeneralSecurityException;
-
-
     }
 
     interface RethrowVoidGeneralSecurityException {
 
         void run() throws GeneralSecurityException;
-
-
     }
 
 
