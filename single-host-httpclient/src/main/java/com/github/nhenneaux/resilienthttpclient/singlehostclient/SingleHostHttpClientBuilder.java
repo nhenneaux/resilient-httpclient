@@ -35,7 +35,7 @@ public class SingleHostHttpClientBuilder {
     }
 
     public static SingleHostHttpClientBuilder builder(String hostname) {
-        return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)));
+        return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
     }
 
     public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {
@@ -51,7 +51,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname) {
         return builder(hostname)
                 .withTlsNameMatching()
-                .withSni()
+                //TODO.withSni()
                 .buildWithHostHeader();
     }
 
@@ -69,7 +69,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname, HttpClient.Builder builder) {
         return builder(hostname, builder)
                 .withTlsNameMatching()
-                .withSni()
+                //TODO.withSni()
                 .buildWithHostHeader();
     }
 
@@ -87,7 +87,7 @@ public class SingleHostHttpClientBuilder {
     public static HttpClient build(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
         return builder(hostname, builder)
                 .withTlsNameMatching(trustStore)
-                .withSni()
+                //TODO.withSni()
                 .buildWithHostHeader();
     }
 
