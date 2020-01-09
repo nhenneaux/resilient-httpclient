@@ -24,7 +24,7 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
  */
 @SuppressWarnings("WeakerAccess") // To use outside the module
 public class SingleHostHttpClientBuilder {
-
+    private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
 
     private final String hostname;
     private final HttpClient.Builder builder;
@@ -43,11 +43,9 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
-     * Build a single hostname client. It overrides the following elements of the builder
-     * <ul>
-     *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext disabling default name validation and using the given hostname</li>
-     *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
-     * </ul>
+     * Build a single hostname client.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
      * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
      */
     public static HttpClient build(String hostname) {
@@ -58,26 +56,62 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
-     * Build a single hostname client. It overrides the following elements of the builder
+     * Build a single hostname client.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
+     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
+     * It overrides the following elements of the builder
      * <ul>
      *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext disabling default name validation and using the given hostname</li>
      *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
      * </ul>
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
      */
     public static HttpClient build(String hostname, HttpClient.Builder builder) {
         return builder(hostname, builder)
-                .withTlsNameMatching(null)
+                .withTlsNameMatching()
                 .withSni()
                 .buildWithHostHeader();
     }
 
-
+    /**
+     * Build a single hostname client.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
+     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
+     * It overrides the following elements of the builder
+     * <ul>
+     *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext using the given truststore disabling default name validation and using the given hostname</li>
+     *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
+     * </ul>
+     */
     public static HttpClient build(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
         return builder(hostname, builder)
                 .withTlsNameMatching(trustStore)
                 .withSni()
                 .buildWithHostHeader();
+    }
+
+    public static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore, SSLContext initialSslContext) {
+        final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
+
+        handleGeneralSecurityException(() -> initialSslContext.init(null, trustOnlyGivenHostname, new SecureRandom()));
+        return initialSslContext;
+    }
+
+    static Optional<Runtime.Version> isJava13OrHigher() {
+        return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
+    }
+
+    public static TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
+        final TrustManagerFactory instance = handleGeneralSecurityException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
+
+        handleGeneralSecurityException(() -> instance.init(truststore));
+
+        var trustManagers = instance.getTrustManagers();
+        var trustManager = (X509TrustManager) trustManagers[0];
+        return new TrustManager[]{
+                new SingleHostnameX509TrustManager(trustManager, hostname)
+        };
     }
 
     SingleHostHttpClientBuilder withSni() {
@@ -88,24 +122,20 @@ public class SingleHostHttpClientBuilder {
     }
 
     SingleHostHttpClientBuilder withTlsNameMatching() {
-        return withTlsNameMatching(null);
+        return withTlsNameMatching((KeyStore) null);
     }
 
-    SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore) {
-        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore);
-        final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
-        try {
-            builder.sslContext(sslContextForSingleHostname);
-        } finally {
-            if (previousDisable == null) {
-                System.clearProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION);
-            } else {
-                System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
-            }
-        }
-        return this;
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore) {
+        return withTlsNameMatching(trustStore, handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3")));
     }
 
+    public SingleHostHttpClientBuilder withTlsNameMatching(SSLContext initialSslContext) {
+        return withTlsNameMatching(null, initialSslContext);
+    }
+
+    /**
+     * Build a client with HTTP header host overridden in Java 13+
+     */
     public HttpClient buildWithHostHeader() {
         /*
          * Override host header in the HTTP request so that it can be used for routing on server side.
@@ -122,39 +152,20 @@ public class SingleHostHttpClientBuilder {
         return builder.build();
     }
 
-
-    private static final String JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION = "jdk.internal.httpclient.disableHostnameVerification";
-
-
-    static Optional<Runtime.Version> isJava13OrHigher() {
-        return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
+    SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
+        final String previousDisable = System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, Boolean.TRUE.toString());
+        try {
+            builder.sslContext(sslContextForSingleHostname);
+        } finally {
+            if (previousDisable == null) {
+                System.clearProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION);
+            } else {
+                System.setProperty(JDK_INTERNAL_HTTPCLIENT_DISABLE_HOSTNAME_VERIFICATION, previousDisable);
+            }
+        }
+        return this;
     }
-
-
-    public static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore) {
-        final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
-
-        final SSLContext sslContextForSingleHostname = handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3"));
-
-        handleGeneralSecurityException(() -> sslContextForSingleHostname.init(null, trustOnlyGivenHostname, new SecureRandom()));
-        return sslContextForSingleHostname;
-    }
-
-    public static TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
-        final TrustManagerFactory instance = handleGeneralSecurityException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
-
-        handleGeneralSecurityException(() -> instance.init(truststore));
-
-        var trustManagers = instance.getTrustManagers();
-        var trustManager = (X509TrustManager) trustManagers[0];
-        return new TrustManager[]{
-                new SingleHostnameX509TrustManager(trustManager, hostname)
-        };
-    }
-
-
-
-
 
     interface RethrowGeneralSecurityException<T> {
         static <T> T handleGeneralSecurityException(RethrowGeneralSecurityException<T> operation) {
