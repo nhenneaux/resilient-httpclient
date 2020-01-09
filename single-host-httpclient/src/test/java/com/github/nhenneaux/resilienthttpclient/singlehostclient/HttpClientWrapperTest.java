@@ -17,7 +17,7 @@ class HttpClientWrapperTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.build("test");
+        SingleHostHttpClientBuilder.builder("test").withTlsNameMatching().build();
     }
 
     @Test
