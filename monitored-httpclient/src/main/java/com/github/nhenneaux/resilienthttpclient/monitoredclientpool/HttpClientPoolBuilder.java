@@ -93,8 +93,12 @@ public class HttpClientPoolBuilder {
 
     @SuppressWarnings("AccessStaticViaInstance")
     public HttpClientPool build() {
-        Objects.requireNonNull(dnsLookupWrapper, "DnsLookupWrapper is not specified. Use default one or specify your one.");
-        Objects.requireNonNull(scheduledExecutorService, "ScheduledExecutorService is not specified. Use default one or specify your one.");
+        if (dnsLookupWrapper == null) {
+            dnsLookupWrapper = new DnsLookupWrapper();
+        }
+        if (scheduledExecutorService == null) {
+            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        }
         Objects.requireNonNull(serverConfiguration, "ServerConfiguration is not specified. Use default one or specify your one.");
 
         final HttpClient singleHostnameClient;
