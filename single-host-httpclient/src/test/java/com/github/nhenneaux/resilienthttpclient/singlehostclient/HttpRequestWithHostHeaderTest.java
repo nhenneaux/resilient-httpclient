@@ -42,7 +42,7 @@ class HttpRequestWithHostHeaderTest {
         final String hostname = UUID.randomUUID().toString();
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final HttpRequestWithHostHeader httpRequestWithHostHeader = new HttpRequestWithHostHeader(request, hostname);
-        assertSame(request.bodyPublisher(), httpRequestWithHostHeader.bodyPublisher());
+        assertSame(request.expectContinue(), httpRequestWithHostHeader.expectContinue());
     }
 
     @Test
