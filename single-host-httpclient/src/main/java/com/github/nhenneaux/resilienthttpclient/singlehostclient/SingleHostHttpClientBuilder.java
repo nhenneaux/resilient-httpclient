@@ -122,6 +122,11 @@ public class SingleHostHttpClientBuilder {
     private static Optional<Runtime.Version> isJava13OrHigher() {
         return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
     }
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
+        builder.sslContext(sslContextForSingleHostname);
+        return this;
+    }
 
     private static TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
         final TrustManagerFactory instance = handleGeneralSecurityException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
