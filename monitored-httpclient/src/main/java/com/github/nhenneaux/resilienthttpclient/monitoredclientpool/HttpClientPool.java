@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
@@ -33,6 +34,33 @@ public class HttpClientPool implements AutoCloseable {
     private final ServerConfiguration serverConfiguration;
     private final ScheduledFuture<?> scheduledFutureDnsRefresh;
 
+    public HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration
+    ) {
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname())
+        );
+    }
+
+    public HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration,
+            final SingleHostHttpClientBuilder singleHostHttpClientBuilder
+    ) {
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                singleHostHttpClientBuilder.build()
+        );
+    }
+
     protected HttpClientPool(
             final DnsLookupWrapper dnsLookupWrapper,
             final ScheduledExecutorService scheduledExecutorService,
@@ -43,6 +71,7 @@ public class HttpClientPool implements AutoCloseable {
         this.httpClientsCache = new AtomicReference<>();
 
         checkDnsCacheSecurityProperties();
+
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
