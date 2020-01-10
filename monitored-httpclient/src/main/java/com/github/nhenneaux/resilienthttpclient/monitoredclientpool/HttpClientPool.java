@@ -8,7 +8,6 @@ import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.KeyStore;
 import java.security.Security;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,7 +40,7 @@ public class HttpClientPool implements AutoCloseable {
             final ScheduledExecutorService scheduledExecutorService,
             final ServerConfiguration serverConfiguration
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null);
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname()));
     }
 
     public HttpClientPool(
@@ -50,16 +49,39 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore));
     }
 
-    public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore, HttpClient.Builder builder) {
+    public HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration,
+            final KeyStore trustStore,
+            final HttpClient.Builder builder
+    ) {
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, builder));
+    }
+
+    public HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration,
+            final SingleHostHttpClientBuilder singleHostHttpClientBuilder
+    ) {
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, singleHostHttpClientBuilder.build());
+    }
+
+    protected HttpClientPool(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ScheduledExecutorService scheduledExecutorService,
+            final ServerConfiguration serverConfiguration,
+            final HttpClient singleHostnameClient
+    ) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
 
         checkDnsCacheSecurityProperties();
 
-        final HttpClient singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, builder);
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
