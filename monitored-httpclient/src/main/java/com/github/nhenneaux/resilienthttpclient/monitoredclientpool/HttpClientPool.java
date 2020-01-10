@@ -2,12 +2,13 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
-import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientProvider;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.KeyStore;
 import java.security.Security;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,7 +50,7 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder());
+        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, trustStore, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
     }
 
     public HttpClientPool(DnsLookupWrapper dnsLookupWrapper, ScheduledExecutorService scheduledExecutorService, ServerConfiguration serverConfiguration, KeyStore trustStore, HttpClient.Builder builder) {
@@ -58,7 +59,7 @@ public class HttpClientPool implements AutoCloseable {
 
         checkDnsCacheSecurityProperties();
 
-        final HttpClient singleHostnameClient = new SingleHostHttpClientProvider().buildSingleHostnameHttpClient(serverConfiguration.getHostname(), trustStore, builder);
+        final HttpClient singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, builder);
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
