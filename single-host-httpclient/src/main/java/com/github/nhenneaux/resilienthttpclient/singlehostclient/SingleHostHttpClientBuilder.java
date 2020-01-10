@@ -59,6 +59,19 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
+     * Build a single hostname client with a custom truststore.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
+     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
+     */
+    public static HttpClient build(String hostname, KeyStore trustStore) {
+        return builder(hostname)
+                .withTlsNameMatching(trustStore)
+                .withSni()
+                .buildWithHostHeader();
+    }
+
+    /**
      * Build a single hostname client.
      * It uses TLS matching based on the given hostname.
      * It also provides the given hostname in SNI extension.
@@ -117,14 +130,14 @@ public class SingleHostHttpClientBuilder {
         };
     }
 
-    SingleHostHttpClientBuilder withSni() {
+    public SingleHostHttpClientBuilder withSni() {
         final SSLParameters sslParameters = new SSLParameters();
         sslParameters.setServerNames(Collections.singletonList(new SNIHostName(hostname)));
         builder.sslParameters(sslParameters);
         return this;
     }
 
-    SingleHostHttpClientBuilder withTlsNameMatching() {
+    public SingleHostHttpClientBuilder withTlsNameMatching() {
         return withTlsNameMatching((KeyStore) null);
     }
 
@@ -151,7 +164,7 @@ public class SingleHostHttpClientBuilder {
         return builder.build();
     }
 
-    SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
         final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
         builder.sslContext(sslContextForSingleHostname);
         return this;

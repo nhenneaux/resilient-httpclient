@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
+import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,7 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.KeyStore;
 import java.security.Security;
 import java.time.Duration;
 import java.util.List;
@@ -60,6 +62,47 @@ class HttpClientPoolTest {
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
         }
+    }
+
+    @Test
+    void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
+        String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname()).withTlsNameMatching().withSni())) {
+            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
+            final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::statusCode)
+                    .join();
+            assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        }
+    }
+
+    @Test
+    void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
+        String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, (KeyStore) null)) {
+            await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
+            final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::statusCode)
+                    .join();
+            assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        }
+
     }
 
     @Test
