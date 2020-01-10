@@ -82,7 +82,6 @@ class HttpClientPoolTest {
                     .join();
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
-
     }
 
     @Test
