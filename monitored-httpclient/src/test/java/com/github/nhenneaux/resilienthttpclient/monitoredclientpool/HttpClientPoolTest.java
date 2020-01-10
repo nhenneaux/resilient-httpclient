@@ -68,7 +68,7 @@ class HttpClientPoolTest {
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
         String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname()).withTlsNameMatching().withSni())) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().withSni())) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
             final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
@@ -88,7 +88,7 @@ class HttpClientPoolTest {
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
         String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, (KeyStore) null)) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader())) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
             final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
@@ -333,7 +333,7 @@ class HttpClientPoolTest {
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, null, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader())) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
             @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(5)).getHostAddress();
