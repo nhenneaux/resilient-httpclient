@@ -40,7 +40,12 @@ public class HttpClientPool implements AutoCloseable {
             final ScheduledExecutorService scheduledExecutorService,
             final ServerConfiguration serverConfiguration
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname()));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname())
+        );
     }
 
     public HttpClientPool(
@@ -49,7 +54,13 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname())
+                        .withTrustStore(trustStore)
+        );
     }
 
     public HttpClientPool(
@@ -59,7 +70,14 @@ public class HttpClientPool implements AutoCloseable {
             final KeyStore trustStore,
             final HttpClient.Builder builder
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, builder));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname())
+                        .withTrustStore(trustStore)
+                        .withHttpClientBuilder(builder)
+        );
     }
 
     public HttpClientPool(
@@ -81,7 +99,6 @@ public class HttpClientPool implements AutoCloseable {
         this.httpClientsCache = new AtomicReference<>();
 
         checkDnsCacheSecurityProperties();
-
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept

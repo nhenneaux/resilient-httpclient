@@ -10,7 +10,6 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
@@ -25,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderTest {
+
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -38,13 +38,11 @@ class SingleHostHttpClientBuilderTest {
         for (String hostname : hosts) {
             final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-            final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+            final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).build();
 
-
-            HttpRequest request = HttpRequest.newBuilder()
+            final HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://" + ip))
                     .build();
-
 
             // When
             final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -62,13 +60,13 @@ class SingleHostHttpClientBuilderTest {
         final var hostname = "openjdk.java.net";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withConnectTimeout(Duration.ofSeconds(2))
                 .build();
 
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
 
         // When
         final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -85,15 +83,14 @@ class SingleHostHttpClientBuilderTest {
         final var hostname = "openjdk.java.net";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
-                .withTlsNameMatching(SSLContext.getInstance("TLSv1.2"))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withConnectTimeout(Duration.ofSeconds(2))
+                .withInitialSslContext(SSLContext.getInstance("TLSv1.2"))
                 .build();
 
-
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
-
 
         // When
         final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -105,18 +102,16 @@ class SingleHostHttpClientBuilderTest {
     }
 
     @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() throws NoSuchAlgorithmException {
+    void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() {
         // Given
         final var hostname = "openjdk.java.net";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname, (KeyStore) null);
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).build();
 
-
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
-
 
         // When
         final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -134,13 +129,11 @@ class SingleHostHttpClientBuilderTest {
         final var hostname = "24max.de";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).build();
 
-
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
-
 
         // When
         final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -149,9 +142,7 @@ class SingleHostHttpClientBuilderTest {
 
         // Then
         assertNotNull(response);
-
     }
-
 
     @Test
     void shouldValidateWrongHost() {
@@ -159,18 +150,17 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "wrong.host.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).build();
 
-
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
-
 
         // When
         final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .join());
+
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -181,18 +171,19 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "1000-sans.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withoutSni()
                 .build();
 
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
 
         // When
         final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .join());
+
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -203,18 +194,19 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "no-subject.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withoutSni()
                 .build();
 
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
 
         // When
         final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .join());
+
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -225,18 +217,19 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "no-common-name.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withoutSni()
                 .build();
 
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
 
         // When
         final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .join());
+
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -246,6 +239,7 @@ class SingleHostHttpClientBuilderTest {
         // Given
         final String hostname = "notfound.unit";
         final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+
         // When
         final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname));
 
@@ -256,12 +250,13 @@ class SingleHostHttpClientBuilderTest {
 
     @Test
     void unreachableAddress() {
-        final HttpClient client = SingleHostHttpClientBuilder.build("no.http.server", null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(200)));
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://10.2.3.4"))
+        final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server")
+                .withConnectTimeout(Duration.ofMillis(200))
                 .build();
 
+        final HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://10.2.3.4"))
+                .build();
 
         // When
         final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -275,9 +270,11 @@ class SingleHostHttpClientBuilderTest {
 
     @Test
     void noSubjectAlternativeName() {
-        final HttpClient client = SingleHostHttpClientBuilder.build("no.http.server", null, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(1_000)));
+        final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server")
+                .withConnectTimeout(Duration.ofMillis(1_000))
+                .build();
 
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://1.1.1.1"))
                 .build();
 
@@ -298,17 +295,17 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "http.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname)
+                .withoutSni()
+                .build();
 
-
-        HttpRequest request = HttpRequest.newBuilder()
+        final HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
 
         // When
         final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body);
-
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);

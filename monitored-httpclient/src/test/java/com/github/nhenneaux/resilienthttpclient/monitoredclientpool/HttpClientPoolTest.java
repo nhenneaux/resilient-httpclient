@@ -68,7 +68,12 @@ class HttpClientPoolTest {
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
         String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (final HttpClientPool httpClientPool = new HttpClientPool(new DnsLookupWrapper(), Executors.newSingleThreadScheduledExecutor(), serverConfiguration, SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname()).withTlsNameMatching().withSni())) {
+        try (HttpClientPool httpClientPool = new HttpClientPool(
+                new DnsLookupWrapper(),
+                Executors.newSingleThreadScheduledExecutor(),
+                serverConfiguration,
+                SingleHostHttpClientBuilder.builder(serverConfiguration.getHostname()).withoutHostHeader().build()
+        )) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
             final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();

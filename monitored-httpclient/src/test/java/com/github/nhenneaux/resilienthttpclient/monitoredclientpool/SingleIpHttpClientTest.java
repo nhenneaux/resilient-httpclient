@@ -28,14 +28,14 @@ class SingleIpHttpClientTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.build("test");
+        SingleHostHttpClientBuilder.builder("test").build();
     }
 
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
         final String hostname = "cloudflare.com";
-        final HttpClient httpClient = SingleHostHttpClientBuilder.build(hostname);
+        final HttpClient httpClient = SingleHostHttpClientBuilder.builder(hostname).build();
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
