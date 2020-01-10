@@ -40,7 +40,12 @@ public class HttpClientPool implements AutoCloseable {
             final ScheduledExecutorService scheduledExecutorService,
             final ServerConfiguration serverConfiguration
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname()));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder.build(serverConfiguration.getHostname())
+        );
     }
 
     public HttpClientPool(
@@ -49,7 +54,16 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final KeyStore trustStore
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder
+                        .builder(serverConfiguration.getHostname())
+                        .withTlsNameMatching(trustStore)
+                        .withSni()
+                        .buildWithHostHeader()
+        );
     }
 
     public HttpClientPool(
@@ -59,7 +73,16 @@ public class HttpClientPool implements AutoCloseable {
             final KeyStore trustStore,
             final HttpClient.Builder builder
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, builder));
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                SingleHostHttpClientBuilder
+                        .builder(serverConfiguration.getHostname(), builder)
+                        .withTlsNameMatching(trustStore)
+                        .withSni()
+                        .buildWithHostHeader()
+        );
     }
 
     public HttpClientPool(
@@ -68,7 +91,12 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final SingleHostHttpClientBuilder singleHostHttpClientBuilder
     ) {
-        this(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, singleHostHttpClientBuilder.build());
+        this(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                singleHostHttpClientBuilder.build()
+        );
     }
 
     protected HttpClientPool(
