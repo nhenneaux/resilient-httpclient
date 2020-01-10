@@ -38,27 +38,6 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
-     * Build a single hostname client with default configuration.
-     * It uses TLS matching based on the given hostname.
-     * It also provides the given hostname in SNI extension.
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
-     */
-    public static HttpClient newHttpClient(String hostname) {
-        return builder(hostname)
-                .withTlsNameMatching()
-                .withSni()
-                .buildWithHostHeader();
-    }
-
-
-    /**
-     * Build a single hostname client builder.
-     */
-    public static SingleHostHttpClientBuilder builder(String hostname) {
-        return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
-    }
-
-    /**
      * Build a single hostname client builder.
      * It could override the following elements of the builder.
      * <ul>
@@ -69,7 +48,6 @@ public class SingleHostHttpClientBuilder {
     public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {
         return new SingleHostHttpClientBuilder(hostname, builder);
     }
-
 
     public SingleHostHttpClientBuilder withSni() {
         final SSLParameters sslParameters = new SSLParameters();
@@ -97,10 +75,23 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
+     * Build a single hostname client with default configuration.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
+     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
+     */
+    public static HttpClient newHttpClient(String hostname) {
+        return builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                .withTlsNameMatching()
+                .withSni()
+                .buildWithHostHeader();
+    }
+
+    /**
      * Build a client with HTTP header host overridden in Java 13+
      */
     public HttpClient buildWithHostHeader() {
-        HttpClient client = builder.build();
+        HttpClient client = build();
         return isJava13OrHigher()
                 .map(ignored -> new HttpClientWrapper(client, hostname))
                 .map(HttpClient.class::cast)
