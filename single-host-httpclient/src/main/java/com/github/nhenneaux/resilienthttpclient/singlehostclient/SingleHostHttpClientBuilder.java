@@ -29,8 +29,9 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 @SuppressWarnings({"WeakerAccess", "unused"}) // To use outside the module
 public class SingleHostHttpClientBuilder {
 
-    private final String hostname;
-    private final HttpClient.Builder builder;
+    private String hostname;
+    private HttpClient.Builder builder;
+    private KeyStore trustStore;
 
     private SingleHostHttpClientBuilder(String hostname, HttpClient.Builder builder) {
         this.hostname = hostname;
@@ -41,9 +42,22 @@ public class SingleHostHttpClientBuilder {
         return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
     }
 
-    public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {
-        return new SingleHostHttpClientBuilder(hostname, builder);
+    public SingleHostHttpClientBuilder withHttpClientBuilder(HttpClient.Builder httpClientBuilder) {
+        this.builder = httpClientBuilder;
+        return this;
     }
+
+    public SingleHostHttpClientBuilder withTrustStore(KeyStore trustStore) {
+        return withTlsNameMatching(trustStore);
+    }
+
+    public HttpClient build() {
+        return builder(hostname)
+                .withTlsNameMatching(trustStore)
+                .withSni()
+                .buildWithHostHeader();
+    }
+
 
     /**
      * Build a single hostname client.
@@ -158,10 +172,6 @@ public class SingleHostHttpClientBuilder {
                 .map(ignored -> new HttpClientWrapper(client, hostname))
                 .map(HttpClient.class::cast)
                 .orElse(client);
-    }
-
-    public HttpClient build() {
-        return builder.build();
     }
 
     public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
