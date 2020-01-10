@@ -10,7 +10,6 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
@@ -62,7 +61,7 @@ class SingleHostHttpClientBuilderTest {
         final var hostname = "openjdk.java.net";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))).withTlsNameMatching().withSni().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -79,76 +78,6 @@ class SingleHostHttpClientBuilderTest {
         assertNotNull(response);
     }
 
-    @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
-        // Given
-        final var hostname = "openjdk.java.net";
-        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
-
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
-                .withTlsNameMatching(SSLContext.getInstance("TLSv1.2"))
-                .build();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
-
-
-        // When
-        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join();
-
-        // Then
-        assertNotNull(response);
-    }
-
-    @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() throws NoSuchAlgorithmException {
-        // Given
-        final var hostname = "openjdk.java.net";
-        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
-
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname, (KeyStore) null);
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
-
-
-        // When
-        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join();
-
-        // Then
-        assertNotNull(response);
-    }
-
-    @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithHttpClientBuilder() {
-        // Given
-        final var hostname = "openjdk.java.net";
-        final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
-
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))).withTlsNameMatching().withSni().build();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
-
-
-        // When
-        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join();
-
-        // Then
-        assertNotNull(response);
-    }
 
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {

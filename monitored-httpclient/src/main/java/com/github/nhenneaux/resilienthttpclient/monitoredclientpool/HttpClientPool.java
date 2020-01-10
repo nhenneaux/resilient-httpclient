@@ -6,7 +6,6 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpC
 
 import java.net.InetAddress;
 import java.net.http.HttpClient;
-import java.security.KeyStore;
 import java.security.Security;
 import java.util.List;
 import java.util.Optional;
@@ -45,43 +44,6 @@ public class HttpClientPool implements AutoCloseable {
                 scheduledExecutorService,
                 serverConfiguration,
                 SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname())
-        );
-    }
-
-    public HttpClientPool(
-            final DnsLookupWrapper dnsLookupWrapper,
-            final ScheduledExecutorService scheduledExecutorService,
-            final ServerConfiguration serverConfiguration,
-            final KeyStore trustStore
-    ) {
-        this(
-                dnsLookupWrapper,
-                scheduledExecutorService,
-                serverConfiguration,
-                SingleHostHttpClientBuilder
-                        .builder(serverConfiguration.getHostname())
-                        .withTlsNameMatching(trustStore)
-                        .withSni()
-                        .buildWithHostHeader()
-        );
-    }
-
-    public HttpClientPool(
-            final DnsLookupWrapper dnsLookupWrapper,
-            final ScheduledExecutorService scheduledExecutorService,
-            final ServerConfiguration serverConfiguration,
-            final KeyStore trustStore,
-            final HttpClient.Builder builder
-    ) {
-        this(
-                dnsLookupWrapper,
-                scheduledExecutorService,
-                serverConfiguration,
-                SingleHostHttpClientBuilder
-                        .builder(serverConfiguration.getHostname(), builder)
-                        .withTlsNameMatching(trustStore)
-                        .withSni()
-                        .buildWithHostHeader()
         );
     }
 
