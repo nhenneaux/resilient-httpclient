@@ -37,16 +37,27 @@ public class SingleHostHttpClientBuilder {
         this.builder = builder;
     }
 
+    /**
+     * Build a single hostname client builder.
+     */
     public static SingleHostHttpClientBuilder builder(String hostname) {
         return new SingleHostHttpClientBuilder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)));
     }
 
+    /**
+     * Build a single hostname client builder.
+     * It could override the following elements of the builder.
+     * <ul>
+     *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext using the given truststore disabling default name validation and using the given hostname</li>
+     *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
+     * </ul>
+     */
     public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {
         return new SingleHostHttpClientBuilder(hostname, builder);
     }
 
     /**
-     * Build a single hostname client.
+     * Build a single hostname client with default configuration.
      * It uses TLS matching based on the given hostname.
      * It also provides the given hostname in SNI extension.
      * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
@@ -58,56 +69,8 @@ public class SingleHostHttpClientBuilder {
                 .buildWithHostHeader();
     }
 
-    /**
-     * Build a single hostname client with a custom truststore.
-     * It uses TLS matching based on the given hostname.
-     * It also provides the given hostname in SNI extension.
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
-     */
-    public static HttpClient build(String hostname, KeyStore trustStore) {
-        return builder(hostname)
-                .withTlsNameMatching(trustStore)
-                .withSni()
-                .buildWithHostHeader();
-    }
 
-    /**
-     * Build a single hostname client.
-     * It uses TLS matching based on the given hostname.
-     * It also provides the given hostname in SNI extension.
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
-     * It overrides the following elements of the builder
-     * <ul>
-     *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext disabling default name validation and using the given hostname</li>
-     *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
-     * </ul>
-     */
-    public static HttpClient build(String hostname, HttpClient.Builder builder) {
-        return builder(hostname, builder)
-                .withTlsNameMatching()
-                .withSni()
-                .buildWithHostHeader();
-    }
-
-    /**
-     * Build a single hostname client.
-     * It uses TLS matching based on the given hostname.
-     * It also provides the given hostname in SNI extension.
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
-     * It overrides the following elements of the builder
-     * <ul>
-     *     <li><code>java.net.http.HttpClient.Builder#sslContext(javax.net.ssl.SSLContext)</code> with a custom SSLContext using the given truststore disabling default name validation and using the given hostname</li>
-     *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
-     * </ul>
-     */
-    public static HttpClient build(String hostname, KeyStore trustStore, HttpClient.Builder builder) {
-        return builder(hostname, builder)
-                .withTlsNameMatching(trustStore)
-                .withSni()
-                .buildWithHostHeader();
-    }
-
-    public static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore, SSLContext initialSslContext) {
+    private static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore, SSLContext initialSslContext) {
         final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
 
         handleGeneralSecurityException(() -> initialSslContext.init(null, trustOnlyGivenHostname, new SecureRandom()));
@@ -118,7 +81,7 @@ public class SingleHostHttpClientBuilder {
         return Optional.of(Runtime.version()).filter(version -> version.feature() >= 13);
     }
 
-    public static TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
+    private static TrustManager[] singleHostTrustManager(String hostname, KeyStore truststore) {
         final TrustManagerFactory instance = handleGeneralSecurityException(() -> TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()));
 
         handleGeneralSecurityException(() -> instance.init(truststore));
@@ -149,6 +112,12 @@ public class SingleHostHttpClientBuilder {
         return withTlsNameMatching(null, initialSslContext);
     }
 
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
+        builder.sslContext(sslContextForSingleHostname);
+        return this;
+    }
+
     /**
      * Build a client with HTTP header host overridden in Java 13+
      */
@@ -164,11 +133,6 @@ public class SingleHostHttpClientBuilder {
         return builder.build();
     }
 
-    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
-        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
-        builder.sslContext(sslContextForSingleHostname);
-        return this;
-    }
 
     interface RethrowGeneralSecurityException<T> {
         static <T> T handleGeneralSecurityException(RethrowGeneralSecurityException<T> operation) {
