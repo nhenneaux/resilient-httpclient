@@ -37,7 +37,7 @@ class SingleHostHttpClientBuilderTest {
         for (String hostname : hosts) {
             final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-            final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname);
 
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -110,7 +110,7 @@ class SingleHostHttpClientBuilderTest {
         final var hostname = "24max.de";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname);
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -135,7 +135,7 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "wrong.host.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.build(hostname);
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname);
 
 
         HttpRequest request = HttpRequest.newBuilder()

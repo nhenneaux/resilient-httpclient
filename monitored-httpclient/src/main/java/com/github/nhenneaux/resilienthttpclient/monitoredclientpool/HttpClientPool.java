@@ -44,7 +44,7 @@ public class HttpClientPool implements AutoCloseable {
                 dnsLookupWrapper,
                 scheduledExecutorService,
                 serverConfiguration,
-                SingleHostHttpClientBuilder.build(serverConfiguration.getHostname())
+                SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname())
         );
     }
 
