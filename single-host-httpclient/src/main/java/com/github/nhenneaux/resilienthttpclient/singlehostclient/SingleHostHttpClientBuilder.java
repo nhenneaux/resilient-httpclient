@@ -38,6 +38,19 @@ public class SingleHostHttpClientBuilder {
     }
 
     /**
+     * Build a single hostname client with default configuration.
+     * It uses TLS matching based on the given hostname.
+     * It also provides the given hostname in SNI extension.
+     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
+     */
+    public static HttpClient newHttpClient(String hostname) {
+        return builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                .withTlsNameMatching()
+                .withSni()
+                .buildWithHostHeader();
+    }
+
+    /**
      * Build a single hostname client builder.
      * It could override the following elements of the builder.
      * <ul>
@@ -74,18 +87,6 @@ public class SingleHostHttpClientBuilder {
         return this;
     }
 
-    /**
-     * Build a single hostname client with default configuration.
-     * It uses TLS matching based on the given hostname.
-     * It also provides the given hostname in SNI extension.
-     * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
-     */
-    public static HttpClient newHttpClient(String hostname) {
-        return builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
-                .withTlsNameMatching()
-                .withSni()
-                .buildWithHostHeader();
-    }
 
     /**
      * Build a client with HTTP header host overridden in Java 13+
