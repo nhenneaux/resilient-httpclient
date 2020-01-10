@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
         <artifactId>resilient-httpclient</artifactId>
-        <version>0.2.3</version>
+        <version>0.3.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
