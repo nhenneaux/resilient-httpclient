@@ -106,12 +106,12 @@ class SingleHostHttpClientBuilderTest {
     }
 
     @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() throws NoSuchAlgorithmException {
+    void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() {
         // Given
         final var hostname = "openjdk.java.net";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -182,7 +182,7 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "1000-sans.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -204,7 +204,7 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "no-subject.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -226,7 +226,7 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "no-common-name.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -299,7 +299,7 @@ class SingleHostHttpClientBuilderTest {
         String hostname = "http.badssl.com";
         final String ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next().getHostAddress();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname).withTlsNameMatching().buildWithHostHeader();
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
 
 
         HttpRequest request = HttpRequest.newBuilder()
