@@ -5,34 +5,25 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfigura
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 
 import java.net.http.HttpClient;
-import java.security.KeyStore;
-import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+@SuppressWarnings("WeakerAccess") // Used outside library
 public class HttpClientPoolBuilder {
+
+    private final ServerConfiguration serverConfiguration;
 
     private DnsLookupWrapper dnsLookupWrapper;
     private ScheduledExecutorService scheduledExecutorService;
-    private ServerConfiguration serverConfiguration;
-    private KeyStore trustStore;
-    private HttpClient.Builder httpClientBuilder;
     private SingleHostHttpClientBuilder singleHostHttpClientBuilder;
+    private HttpClient httpClient;
 
-    public static HttpClientPoolBuilder builder() {
-        return new HttpClientPoolBuilder();
+    private HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
+        this.serverConfiguration = serverConfiguration;
     }
 
-    /**
-     * Build an HttpClientPoolBuilder with all default properties and components with the given hostname
-     *
-     * @param hostname the hostname
-     */
-    public static HttpClientPoolBuilder defaultBuilder(final String hostname) {
-        return new HttpClientPoolBuilder()
-                .withDefaultServerConfiguration(hostname)
-                .withDefaultDnsLookupWrapper()
-                .withDefaultScheduledExecutorService();
+    public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
+        return new HttpClientPoolBuilder(serverConfiguration);
     }
 
     public HttpClientPoolBuilder withDnsLookupWrapper(final DnsLookupWrapper dnsLookupWrapper) {
@@ -61,37 +52,16 @@ public class HttpClientPoolBuilder {
         return this;
     }
 
-    public HttpClientPoolBuilder withServerConfiguration(final ServerConfiguration serverConfiguration) {
-        this.serverConfiguration = serverConfiguration;
-        return this;
-    }
-
-    /**
-     * Adds a server configuration with default properties, but the hostname has to be specified
-     *
-     * @param hostname the hostname
-     */
-    public HttpClientPoolBuilder withDefaultServerConfiguration(final String hostname) {
-        this.serverConfiguration = new ServerConfiguration(hostname);
-        return this;
-    }
-
-    public HttpClientPoolBuilder withTrustStore(final KeyStore trustStore) {
-        this.trustStore = trustStore;
-        return this;
-    }
-
-    public HttpClientPoolBuilder withHttpClientBuilder(final HttpClient.Builder httpClientBuilder) {
-        this.httpClientBuilder = httpClientBuilder;
-        return this;
-    }
-
     public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final SingleHostHttpClientBuilder singleHostHttpClientBuilder) {
         this.singleHostHttpClientBuilder = singleHostHttpClientBuilder;
         return this;
     }
 
-    @SuppressWarnings("AccessStaticViaInstance")
+    public HttpClientPoolBuilder withHttpClient(final HttpClient httpClient) {
+        this.httpClient = httpClient;
+        return this;
+    }
+
     public HttpClientPool build() {
         if (dnsLookupWrapper == null) {
             dnsLookupWrapper = new DnsLookupWrapper();
@@ -99,28 +69,12 @@ public class HttpClientPoolBuilder {
         if (scheduledExecutorService == null) {
             scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         }
-        Objects.requireNonNull(serverConfiguration, "ServerConfiguration is not specified. Use default one or specify your one.");
 
-        final HttpClient singleHostnameClient;
-        if (singleHostHttpClientBuilder != null) {
-            if (trustStore == null && httpClientBuilder == null) {
-                singleHostnameClient = singleHostHttpClientBuilder.build(serverConfiguration.getHostname());
-            } else if (trustStore != null && httpClientBuilder == null) {
-                singleHostnameClient = singleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore);
-            } else if (trustStore != null) {
-                singleHostnameClient = singleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, httpClientBuilder);
+        if (httpClient == null) {
+            if (singleHostHttpClientBuilder == null) {
+                httpClient = SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname());
             } else {
-                singleHostnameClient = singleHostHttpClientBuilder.build(serverConfiguration.getHostname(), httpClientBuilder);
-            }
-        } else {
-            if (trustStore == null && httpClientBuilder == null) {
-                singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname());
-            } else if (trustStore != null && httpClientBuilder == null) {
-                singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore);
-            } else if (trustStore != null) {
-                singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), trustStore, httpClientBuilder);
-            } else {
-                singleHostnameClient = SingleHostHttpClientBuilder.build(serverConfiguration.getHostname(), httpClientBuilder);
+                httpClient = singleHostHttpClientBuilder.build();
             }
         }
 
@@ -128,7 +82,7 @@ public class HttpClientPoolBuilder {
                 dnsLookupWrapper,
                 scheduledExecutorService,
                 serverConfiguration,
-                singleHostnameClient
+                httpClient
         );
     }
 }
