@@ -70,9 +70,9 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPoolBuilder
                 .builder(serverConfiguration)
-                .withSingleHostHttpClientBuilder(
+                .withSingleHostHttpClientBuilder(inetAddress ->
                         SingleHostHttpClientBuilder
-                                .builder(serverConfiguration.getHostname(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                                .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching()
                                 .withSni())
                 .build()
@@ -98,12 +98,12 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPoolBuilder
                 .builder(serverConfiguration)
-                .withHttpClient(
+                .withSingleHostHttpClientBuilder(inetAddress ->
                         SingleHostHttpClientBuilder
-                                .builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                                .builder(hostname, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching((KeyStore) null)
                                 .withSni()
-                                .buildWithHostHeader()
+
                 )
                 .build()) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -280,7 +280,7 @@ class HttpClientPoolTest {
                 .build()) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
-            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(3)).getHostAddress();
+            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(4)).getHostAddress();
             verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
         }
 
@@ -362,10 +362,19 @@ class HttpClientPoolTest {
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(dnsLookupWrapper, scheduledExecutorService, serverConfiguration, SingleHostHttpClientBuilder.builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader())) {
+        try (final HttpClientPool httpClientPool = new HttpClientPool(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                inetAddress -> SingleHostHttpClientBuilder
+                        .builder(hostname, inetAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))
+                        .withTlsNameMatching((KeyStore) null)
+                        .withSni()
+                        .buildWithHostHeader())
+        ) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
-            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(5)).getHostAddress();
+            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(6)).getHostAddress();
 
             await()
                     .atMost(Duration.ofSeconds(2L))

@@ -6,6 +6,7 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -30,10 +31,12 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHo
 public class SingleHostHttpClientBuilder {
 
     private final String hostname;
+    private final InetAddress hostAddress;
     private final HttpClient.Builder builder;
 
-    private SingleHostHttpClientBuilder(String hostname, HttpClient.Builder builder) {
+    private SingleHostHttpClientBuilder(String hostname, InetAddress hostAddress, HttpClient.Builder builder) {
         this.hostname = hostname;
+        this.hostAddress = hostAddress;
         this.builder = builder;
     }
 
@@ -43,8 +46,8 @@ public class SingleHostHttpClientBuilder {
      * It also provides the given hostname in SNI extension.
      * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
      */
-    public static HttpClient newHttpClient(String hostname) {
-        return builder(hostname, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+    public static HttpClient newHttpClient(String hostname, InetAddress hostAddress) {
+        return builder(hostname, hostAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                 .withTlsNameMatching()
                 .withSni()
                 .buildWithHostHeader();
@@ -58,8 +61,8 @@ public class SingleHostHttpClientBuilder {
      *     <li><code>java.net.http.HttpClient.Builder#sslParameters(javax.net.ssl.SSLParameters)</code> to force the SNI server name expected</li>
      * </ul>
      */
-    public static SingleHostHttpClientBuilder builder(String hostname, HttpClient.Builder builder) {
-        return new SingleHostHttpClientBuilder(hostname, builder);
+    public static SingleHostHttpClientBuilder builder(String hostname, InetAddress hostAddress, HttpClient.Builder builder) {
+        return new SingleHostHttpClientBuilder(hostname, hostAddress, builder);
     }
 
     public SingleHostHttpClientBuilder withSni() {
@@ -94,13 +97,13 @@ public class SingleHostHttpClientBuilder {
     public HttpClient buildWithHostHeader() {
         HttpClient client = build();
         return isJava13OrHigher()
-                .map(ignored -> new HttpClientWrapper(client, hostname))
+                .map(ignored -> new HttpClientWrapper(client, hostAddress, hostname))
                 .map(HttpClient.class::cast)
                 .orElse(client);
     }
 
     public HttpClient build() {
-        return builder.build();
+        return new HttpClientWrapper(builder.build(), hostAddress);
     }
 
 

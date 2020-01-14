@@ -4,9 +4,11 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 
+import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 
 @SuppressWarnings("WeakerAccess") // Used outside library
 public class HttpClientPoolBuilder {
@@ -15,8 +17,7 @@ public class HttpClientPoolBuilder {
 
     private DnsLookupWrapper dnsLookupWrapper;
     private ScheduledExecutorService scheduledExecutorService;
-    private SingleHostHttpClientBuilder singleHostHttpClientBuilder;
-    private HttpClient httpClient;
+    private Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilder;
 
     private HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
@@ -52,15 +53,11 @@ public class HttpClientPoolBuilder {
         return this;
     }
 
-    public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final SingleHostHttpClientBuilder singleHostHttpClientBuilder) {
+    public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilder) {
         this.singleHostHttpClientBuilder = singleHostHttpClientBuilder;
         return this;
     }
 
-    public HttpClientPoolBuilder withHttpClient(final HttpClient httpClient) {
-        this.httpClient = httpClient;
-        return this;
-    }
 
     public HttpClientPool build() {
         if (dnsLookupWrapper == null) {
@@ -69,20 +66,18 @@ public class HttpClientPoolBuilder {
         if (scheduledExecutorService == null) {
             scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         }
-
-        if (httpClient == null) {
-            if (singleHostHttpClientBuilder == null) {
-                httpClient = SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname());
-            } else {
-                httpClient = singleHostHttpClientBuilder.build();
-            }
+        final Function<InetAddress, HttpClient> singleHttpClientProvider;
+        if (singleHostHttpClientBuilder == null) {
+            singleHttpClientProvider = (InetAddress inetAddress) -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
+        } else {
+            singleHttpClientProvider = (InetAddress inetAddress) -> singleHostHttpClientBuilder.apply(inetAddress).build();
         }
 
         return new HttpClientPool(
                 dnsLookupWrapper,
                 scheduledExecutorService,
                 serverConfiguration,
-                httpClient
+                singleHttpClientProvider
         );
     }
 }
