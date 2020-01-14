@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
-class HttpClientWrapper extends HttpClient {
+public class HttpClientWrapper extends HttpClient {
     private final HttpClient httpClient;
     private final Function<HttpRequest, SingleIpHttpRequest> requestWrapper;
 
