@@ -280,7 +280,6 @@ class HttpClientPoolTest {
                 .build()) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
-            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(4)).getHostAddress();
             verify(scheduledHealthSingleClientRefreshFuture).cancel(true);
         }
 
@@ -374,7 +373,6 @@ class HttpClientPoolTest {
         ) {
             // Then
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
-            @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(6)).getHostAddress();
 
             await()
                     .atMost(Duration.ofSeconds(2L))
