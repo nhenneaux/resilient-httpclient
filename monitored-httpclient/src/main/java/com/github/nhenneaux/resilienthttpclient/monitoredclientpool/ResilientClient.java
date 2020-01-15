@@ -24,8 +24,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
-import static java.util.function.Predicate.not;
-
 class ResilientClient extends HttpClient {
 
     private static final Logger LOGGER = Logger.getLogger(ResilientClient.class.getName());
@@ -98,9 +96,14 @@ class ResilientClient extends HttpClient {
             SingleIpHttpClient firstClient,
             List<InetAddress> triedAddress
     ) {
+        if (triedAddress.size() >= roundRobinPool.getList().size()) {
+            final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = new CompletableFuture<>();
+            httpResponseCompletableFuture.completeExceptionally(new HttpConnectTimeoutException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
+            return httpResponseCompletableFuture;
+        }
         return Optional.of(firstClient)
                 .filter(ignored -> triedAddress.isEmpty())
-                .or(() -> roundRobinPool.next().filter(not(firstClient::equals)))
+                .or(roundRobinPool::next)
                 .stream()
                 .peek(singleIpHttpClient -> triedAddress.add(singleIpHttpClient.getInetAddress()))
                 .map(SingleIpHttpClient::getHttpClient)
