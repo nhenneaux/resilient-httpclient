@@ -12,6 +12,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +62,16 @@ class SingleIpHttpRequestTest {
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
         assertEquals(new URI("https://" + hostAddress.getHostAddress()), singleIpHttpRequest.uri());
+    }
+
+    @Test
+    void uriInvalidUrl() {
+        final String hostname = UUID.randomUUID().toString();
+        final InetAddress hostAddress = mock(InetAddress.class);
+        final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, singleIpHttpRequest::uri);
+        assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
 
     @Test
