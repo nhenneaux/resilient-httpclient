@@ -16,6 +16,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyStore;
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -51,6 +53,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HttpClientPoolTest {
+    static {
+        // Force properties
+        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", "Host");
+    }
 
     @Test
     void getNextHttpClient() throws MalformedURLException, URISyntaxException {
@@ -523,7 +530,7 @@ class HttpClientPoolTest {
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.0.0.255");
+        when(firstAddress.getHostAddress()).thenReturn("10.1.5.255");
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, firstAddress)));
         // When
         try (final HttpClientPool httpClientPool = new HttpClientPool(
@@ -541,7 +548,7 @@ class HttpClientPoolTest {
             final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://openjdk.java.net")).build(), HttpResponse.BodyHandlers.discarding());
 
             final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
-            assertEquals(ConnectException.class, executionException.getCause().getCause().getClass());
+            assertThat(executionException.getCause().getCause().getClass(), anyOf(Matchers.<Class<?>>equalTo(HttpConnectTimeoutException.class), Matchers.equalTo(ConnectException.class)));
         }
     }
 
