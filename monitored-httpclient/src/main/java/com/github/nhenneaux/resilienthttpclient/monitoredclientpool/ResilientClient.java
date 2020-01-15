@@ -96,7 +96,8 @@ class ResilientClient extends HttpClient {
             SingleIpHttpClient firstClient,
             List<InetAddress> triedAddress
     ) {
-        if (triedAddress.size() >= roundRobinPool.getList().size()) {
+        final long healthyNodes = roundRobinPool.getList().stream().filter(SingleIpHttpClient::isHealthy).count();
+        if (triedAddress.size() >= healthyNodes) {
             final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = new CompletableFuture<>();
             httpResponseCompletableFuture.completeExceptionally(new HttpConnectTimeoutException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
             return httpResponseCompletableFuture;
@@ -137,10 +138,12 @@ class ResilientClient extends HttpClient {
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
         final RoundRobinPool roundRobinPool = roundRobinPoolSupplier.get();
         final SingleIpHttpClient firstClient = roundRobinPool.next().orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request in the pool " + roundRobinPool));
+        final long healthyNodes = roundRobinPool.getList().stream().filter(SingleIpHttpClient::isHealthy).count();
         final List<InetAddress> tried = new ArrayList<>();
 
+
         SingleIpHttpClient client = firstClient;
-        while (true) {
+        while (tried.size() < healthyNodes) {
             try {
                 return client.getHttpClient().send(request, responseBodyHandler);
             } catch (HttpConnectTimeoutException | ConnectException e) {
@@ -156,6 +159,7 @@ class ResilientClient extends HttpClient {
                 client = nextClient.get();
             }
         }
+        throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
     }
 
     @Override

@@ -43,6 +43,7 @@ class ResilientClientTest {
         when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
+        when(roundRobinPool.getList()).thenReturn(List.of(ipHttpClient));
 
         final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();

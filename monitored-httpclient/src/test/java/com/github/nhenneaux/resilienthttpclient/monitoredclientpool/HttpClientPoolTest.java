@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -492,8 +493,6 @@ class HttpClientPoolTest {
         clients.add(firstSingleClient);
         when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
 
-        final InetAddress inetAddress = addresses.iterator().next();
-
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
         final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding());
@@ -504,7 +503,7 @@ class HttpClientPoolTest {
     }
 
     private Optional<SingleIpHttpClient> createSingleClient(String hostname, ServerConfiguration serverConfiguration, InetAddress address) {
-        return Optional.of(new SingleIpHttpClient(
+        final SingleIpHttpClient singleIpHttpClient = spy(new SingleIpHttpClient(
                 SingleHostHttpClientBuilder
                         .builder(hostname, address, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5L)))
                         .withTlsNameMatching((KeyStore) null)
@@ -512,6 +511,8 @@ class HttpClientPoolTest {
                         .buildWithHostHeader(),
                 address,
                 serverConfiguration));
+        when(singleIpHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        return Optional.of(singleIpHttpClient);
     }
 
 
