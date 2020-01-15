@@ -14,19 +14,20 @@ import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 class ResilientClient extends HttpClient {
 
-    static final int MAX_RETRY = 3;
     private static final Logger LOGGER = Logger.getLogger(ResilientClient.class.getName());
-    private final Supplier<SingleIpHttpClient> httpClient;
+    private final Supplier<RoundRobinPool> httpClient;
 
-    ResilientClient(Supplier<SingleIpHttpClient> httpClient) {
+    ResilientClient(Supplier<RoundRobinPool> httpClient) {
         this.httpClient = httpClient;
     }
 
@@ -37,7 +38,7 @@ class ResilientClient extends HttpClient {
     }
 
     private HttpClient httpClient() {
-        return httpClient.get().getHttpClient();
+        return httpClient.get().next().orElseThrow().getHttpClient();
     }
 
     @Override
@@ -82,32 +83,46 @@ class ResilientClient extends HttpClient {
 
     @Override
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
-        int i = 0;
         final ArrayList<InetAddress> tried = new ArrayList<>();
-        do {
-            final SingleIpHttpClient singleIpHttpClient = httpClient.get();
+        for (SingleIpHttpClient singleIpHttpClient : httpClient.get().getList()) {
             try {
                 return singleIpHttpClient.getHttpClient().send(request, responseBodyHandler);
             } catch (HttpConnectTimeoutException e) {
                 LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + singleIpHttpClient.getInetAddress() + ", already tried " + tried);
                 tried.add(singleIpHttpClient.getInetAddress());
             }
-            i++;
-        } while (i < MAX_RETRY);
+        }
         throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
-
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
-        // TODO handle connect timeout
-        return httpClient().sendAsync(request, responseBodyHandler);
+        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler), httpClient.get().getList());
 
+    }
+
+    private <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, List<SingleIpHttpClient> list) {
+        return send.apply(list.iterator().next().getHttpClient())
+                .exceptionally(throwable -> {
+                    if (throwable.getCause() instanceof HttpConnectTimeoutException) {
+                        if (list.size() == 1) {
+                            throw new IllegalStateException(throwable);
+                        }
+                        return handleConnectTimeout(send, list.subList(1, list.size())).join();
+                    }
+                    if (throwable instanceof Error) {
+                        throw (Error) throwable;
+                    }
+                    if (throwable instanceof RuntimeException) {
+                        throw (RuntimeException) throwable;
+                    }
+                    throw new IllegalStateException(throwable);
+                });
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler, HttpResponse.PushPromiseHandler<T> pushPromiseHandler) {
-        return httpClient().sendAsync(request, responseBodyHandler, pushPromiseHandler);
+        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler, pushPromiseHandler), httpClient.get().getList());
     }
 
     @Override

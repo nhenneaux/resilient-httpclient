@@ -162,7 +162,7 @@ public class HttpClientPool implements AutoCloseable {
      * Return a resilient client
      */
     public HttpClient resilientClient() {
-        return new ResilientClient(() -> getNextHttpClient().orElseThrow());
+        return new ResilientClient(this::client);
     }
 
     private RoundRobinPool client() {
