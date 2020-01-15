@@ -5,6 +5,7 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
+import java.net.InetAddress;
 import java.net.ProxySelector;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,14 +15,20 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
-class HttpClientWrapper extends HttpClient {
+public class HttpClientWrapper extends HttpClient {
     private final HttpClient httpClient;
-    private final String hostname;
+    private final Function<HttpRequest, SingleIpHttpRequest> requestWrapper;
 
-    HttpClientWrapper(HttpClient httpClient, String hostname) {
+    HttpClientWrapper(HttpClient httpClient, InetAddress hostAddress, String hostname) {
         this.httpClient = httpClient;
-        this.hostname = hostname;
+        this.requestWrapper = httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, hostname);
+    }
+
+    HttpClientWrapper(HttpClient httpClient, InetAddress hostAddress) {
+        this.httpClient = httpClient;
+        this.requestWrapper = httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress);
     }
 
     @Override
@@ -71,17 +78,17 @@ class HttpClientWrapper extends HttpClient {
 
     @Override
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
-        return httpClient.send(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler);
+        return httpClient.send(requestWrapper.apply(request), responseBodyHandler);
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
-        return httpClient.sendAsync(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler);
+        return httpClient.sendAsync(requestWrapper.apply(request), responseBodyHandler);
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler, HttpResponse.PushPromiseHandler<T> pushPromiseHandler) {
-        return httpClient.sendAsync(new HttpRequestWithHostHeader(request, hostname), responseBodyHandler, pushPromiseHandler);
+        return httpClient.sendAsync(requestWrapper.apply(request), responseBodyHandler, pushPromiseHandler);
     }
 
     @Override

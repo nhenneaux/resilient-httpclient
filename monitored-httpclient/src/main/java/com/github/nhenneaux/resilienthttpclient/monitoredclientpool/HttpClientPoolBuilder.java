@@ -4,26 +4,24 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 
+import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 
-@SuppressWarnings("WeakerAccess") // Used outside library
-public class HttpClientPoolBuilder {
+@SuppressWarnings("WeakerAccess")
+        // Used outside library
+class HttpClientPoolBuilder {
 
     private final ServerConfiguration serverConfiguration;
 
     private DnsLookupWrapper dnsLookupWrapper;
     private ScheduledExecutorService scheduledExecutorService;
-    private SingleHostHttpClientBuilder singleHostHttpClientBuilder;
-    private HttpClient httpClient;
+    private Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilderFunction;
 
-    private HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
+    HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
-    }
-
-    public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
-        return new HttpClientPoolBuilder(serverConfiguration);
     }
 
     public HttpClientPoolBuilder withDnsLookupWrapper(final DnsLookupWrapper dnsLookupWrapper) {
@@ -52,37 +50,31 @@ public class HttpClientPoolBuilder {
         return this;
     }
 
-    public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final SingleHostHttpClientBuilder singleHostHttpClientBuilder) {
-        this.singleHostHttpClientBuilder = singleHostHttpClientBuilder;
+    public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilder) {
+        this.singleHostHttpClientBuilderFunction = singleHostHttpClientBuilder;
         return this;
     }
 
-    public HttpClientPoolBuilder withHttpClient(final HttpClient httpClient) {
-        this.httpClient = httpClient;
-        return this;
-    }
 
     public HttpClientPool build() {
         if (dnsLookupWrapper == null) {
-            dnsLookupWrapper = new DnsLookupWrapper();
+            withDefaultDnsLookupWrapper();
         }
         if (scheduledExecutorService == null) {
-            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            withDefaultScheduledExecutorService();
         }
-
-        if (httpClient == null) {
-            if (singleHostHttpClientBuilder == null) {
-                httpClient = SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname());
-            } else {
-                httpClient = singleHostHttpClientBuilder.build();
-            }
+        final Function<InetAddress, HttpClient> singleHttpClientProvider;
+        if (singleHostHttpClientBuilderFunction == null) {
+            singleHttpClientProvider = (InetAddress inetAddress) -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
+        } else {
+            singleHttpClientProvider = (InetAddress inetAddress) -> singleHostHttpClientBuilderFunction.apply(inetAddress).build();
         }
 
         return new HttpClientPool(
                 dnsLookupWrapper,
                 scheduledExecutorService,
                 serverConfiguration,
-                httpClient
+                singleHttpClientProvider
         );
     }
 }

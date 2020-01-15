@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public class HttpClientPool implements AutoCloseable {
             final DnsLookupWrapper dnsLookupWrapper,
             final ScheduledExecutorService scheduledExecutorService,
             final ServerConfiguration serverConfiguration,
-            final HttpClient singleHostnameClient
+            final Function<InetAddress, HttpClient> singleHttpClientProvider
     ) {
         this.serverConfiguration = serverConfiguration;
         this.httpClientsCache = new AtomicReference<>();
@@ -51,13 +52,21 @@ public class HttpClientPool implements AutoCloseable {
         // For the new IPs new Http clients will be created
         final long dnsLookupRefreshPeriodInSeconds = serverConfiguration.getDnsLookupRefreshPeriodInSeconds();
         this.scheduledFutureDnsRefresh = scheduledExecutorService.scheduleAtFixedRate(
-                () -> refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService),
+                () -> refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService),
                 dnsLookupRefreshPeriodInSeconds,
                 dnsLookupRefreshPeriodInSeconds,
                 TimeUnit.SECONDS
         );
 
-        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHostnameClient, scheduledExecutorService);
+        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
+    }
+
+    public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
+        return new HttpClientPoolBuilder(serverConfiguration);
+    }
+
+    public static HttpClientPool newHttpClientPool(final ServerConfiguration serverConfiguration) {
+        return new HttpClientPoolBuilder(serverConfiguration).build();
     }
 
     static boolean validateProperty(String propertyName, int minimumPropertyValueExpected) {
@@ -76,7 +85,7 @@ public class HttpClientPool implements AutoCloseable {
             final DnsLookupWrapper dnsLookupWrapper,
             final ServerConfiguration serverConfiguration,
             final AtomicReference<RoundRobinPool> httpClientsCache,
-            final HttpClient singleHostnameClient,
+            final Function<InetAddress, HttpClient> singleHttpClientProvider,
             final ScheduledExecutorService scheduledExecutorService
     ) {
         final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
@@ -101,7 +110,7 @@ public class HttpClientPool implements AutoCloseable {
                 updatedLookup
                         .stream()
                         .map(inetAddress -> useOldClientOrCreateNew(
-                                singleHostnameClient,
+                                singleHttpClientProvider,
                                 inetAddress,
                                 oldListOfClients,
                                 serverConfiguration,
@@ -120,7 +129,7 @@ public class HttpClientPool implements AutoCloseable {
     }
 
     private static SingleIpHttpClient useOldClientOrCreateNew(
-            final HttpClient httpClient,
+            final Function<InetAddress, HttpClient> singleHttpClientProvider,
             final InetAddress inetAddress,
             final List<SingleIpHttpClient> oldListOfClients,
             final ServerConfiguration serverConfiguration,
@@ -133,7 +142,7 @@ public class HttpClientPool implements AutoCloseable {
                 .orElseGet(() -> {
                     LOGGER.log(Level.INFO, () -> "New IP found: " + inetAddress.getHostAddress() + " for hostname " + serverConfiguration.getHostname() + ", creating a new HttpClient");
                     return new SingleIpHttpClient(
-                            httpClient,
+                            singleHttpClientProvider.apply(inetAddress),
                             inetAddress,
                             serverConfiguration,
                             scheduledExecutorService
@@ -155,6 +164,13 @@ public class HttpClientPool implements AutoCloseable {
      */
     public Optional<SingleIpHttpClient> getNextHttpClient() {
         return client().next();
+    }
+
+    /**
+     * Return a resilient client
+     */
+    public HttpClient resilientClient() {
+        return new ResilientClient(this::client);
     }
 
     private RoundRobinPool client() {
