@@ -151,7 +151,7 @@ class ResilientClient extends HttpClient {
                 LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
                 tried.add(finalClient.getInetAddress());
                 final Optional<SingleIpHttpClient> nextClient = roundRobinPool.next();
-                if (nextClient.isEmpty() || firstClient == nextClient.get()) {
+                if (nextClient.isEmpty()) {
                     final HttpConnectTimeoutException httpConnectTimeoutException = new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
                     httpConnectTimeoutException.initCause(e);
                     throw httpConnectTimeoutException;

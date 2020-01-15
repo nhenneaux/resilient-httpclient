@@ -15,6 +15,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyStore;
@@ -499,6 +500,105 @@ class HttpClientPoolTest {
 
         final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
         assertEquals("Cannot connect to the server, the following address were tried without success " + addresses + ".", executionException.getCause().getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutSync() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, optionals);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(Arrays.asList(optionals));
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutDuplicateAddressList() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        final List<Optional<SingleIpHttpClient>> optionalList = Arrays.asList(optionals);
+        final List<Optional<SingleIpHttpClient>> optionalsDuplicate = new ArrayList<>(optionalList);
+        optionalsDuplicate.addAll(optionalList);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] duplicateClientsArray = optionalsDuplicate.toArray(Optional[]::new);
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, duplicateClientsArray);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+        final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding());
+
+        final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
+        assertEquals("Cannot connect to the server, the following address were tried without success " + addresses + ".", executionException.getCause().getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutEmptyElement() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        final List<Optional<SingleIpHttpClient>> optionalList = Arrays.asList(optionals);
+        final List<Optional<SingleIpHttpClient>> optionalsDuplicate = new ArrayList<>(optionalList);
+        optionalsDuplicate.add(Optional.empty());
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] clientsArrayWithEmpty = optionalsDuplicate.toArray(Optional[]::new);
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, clientsArrayWithEmpty);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
 
     }
 
