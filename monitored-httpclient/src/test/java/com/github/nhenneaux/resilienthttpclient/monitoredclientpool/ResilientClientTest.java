@@ -5,15 +5,20 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -40,37 +45,66 @@ class ResilientClientTest {
     }
 
     @Test
-    void sendAsync() {
+    void sendAsync() throws ExecutionException, InterruptedException {
+        // Given
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
-        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
-        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
-
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+        final List<SingleIpHttpClient> singleIpHttpClients = List.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        when(roundRobinPool.getList()).thenReturn(singleIpHttpClients);
+
         final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
-        ResilientClient.sendAsync(httpRequest, bodyHandler);
+
+        @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
+        final CompletableFuture<HttpResponse<Void>> responseFuture = CompletableFuture.completedFuture(httpResponse);
+        when(httpClient.sendAsync(httpRequest, bodyHandler)).thenReturn(responseFuture);
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.sendAsync(httpRequest, bodyHandler);
+
+        // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler);
+        assertSame(httpResponse, httpResponseCompletableFuture.get());
     }
 
     @Test
-    void testSendAsync() {
+    void throwForInvalidUrl() {
+        final HttpClient httpClient = mock(HttpClient.class);
+        final String hostname = UUID.randomUUID().toString();
+        InetAddress hostAddress = mock(InetAddress.class);
+        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
+    }
+
+    @Test
+    void testSendAsync() throws ExecutionException, InterruptedException {
+        // Given
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
-        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
-        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
+        final List<SingleIpHttpClient> singleIpHttpClients = List.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        when(roundRobinPool.getList()).thenReturn(singleIpHttpClients);
 
         final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
         final HttpResponse.PushPromiseHandler<Void> pushPromiseHandler = HttpResponse.PushPromiseHandler.of(request -> bodyHandler, new ConcurrentHashMap<>());
-        ResilientClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
+
+        @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
+        final CompletableFuture<HttpResponse<Void>> responseFuture = CompletableFuture.completedFuture(httpResponse);
+        when(httpClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler)).thenReturn(responseFuture);
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
+
+        // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
+        assertSame(httpResponse, httpResponseCompletableFuture.get());
     }
 
 
