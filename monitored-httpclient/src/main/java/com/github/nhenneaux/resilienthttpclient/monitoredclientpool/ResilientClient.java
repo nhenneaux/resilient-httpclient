@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -26,12 +27,12 @@ import java.util.logging.Logger;
 class ResilientClient extends HttpClient {
 
     private static final Logger LOGGER = Logger.getLogger(ResilientClient.class.getName());
+    static final Set<Class<?>> CONNECT_EXCEPTION_CLASS = Set.of(HttpConnectTimeoutException.class, ConnectException.class);
     private final Supplier<RoundRobinPool> httpClient;
 
     ResilientClient(Supplier<RoundRobinPool> httpClient) {
         this.httpClient = httpClient;
     }
-
 
     @Override
     public Optional<CookieHandler> cookieHandler() {
@@ -102,10 +103,14 @@ class ResilientClient extends HttpClient {
 
     }
 
-    private <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, List<SingleIpHttpClient> list) {
+    static <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, List<SingleIpHttpClient> list) {
         return send.apply(list.iterator().next().getHttpClient())
                 .exceptionally(throwable -> {
-                    if (throwable.getCause() instanceof HttpConnectTimeoutException || throwable.getCause() instanceof ConnectException) {
+                    if (Optional.ofNullable(throwable.getCause())
+                            .map(Object::getClass)
+                            .filter(CONNECT_EXCEPTION_CLASS::contains)
+                            .isPresent()
+                    ) {
                         if (list.size() == 1) {
                             throw new IllegalStateException(throwable.getCause());
                         }

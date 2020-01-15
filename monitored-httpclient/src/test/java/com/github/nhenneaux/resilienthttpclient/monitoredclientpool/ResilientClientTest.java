@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
@@ -169,6 +170,42 @@ class ResilientClientTest {
         final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
         ResilientClient.sslContext();
         verify(httpClient).sslContext();
+    }
+
+    @Test
+    void shouldHandleErrorInAsyncSend() {
+        // Given
+        final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
+        final Error expected = new Error();
+        completableFuture.completeExceptionally(expected);
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        // Then
+        assertSame(expected, completionException.getCause());
+    }
+
+    @Test
+    void shouldHandleRuntimeExceptionInAsyncSend() {
+        // Given
+        final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
+        final RuntimeException expected = new RuntimeException();
+        completableFuture.completeExceptionally(expected);
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        // Then
+        assertSame(expected, completionException.getCause());
+    }
+
+    @Test
+    void shouldHandleExceptionInAsyncSend() {
+        // Given
+        final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
+        final Exception expected = new Exception();
+        completableFuture.completeExceptionally(expected);
+        // When
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        // Then
+        assertSame(expected, completionException.getCause().getCause());
     }
 
     @Test
