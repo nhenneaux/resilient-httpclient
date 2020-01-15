@@ -134,20 +134,25 @@ class ResilientClient extends HttpClient {
     public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
         final RoundRobinPool roundRobinPool = roundRobinPoolSupplier.get();
         final SingleIpHttpClient firstClient = roundRobinPool.next().orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request in the pool " + roundRobinPool));
-        final ArrayList<InetAddress> tried = new ArrayList<>();
+        final List<InetAddress> tried = new ArrayList<>();
 
         SingleIpHttpClient client = firstClient;
-        do {
+        while (true) {
             try {
                 return client.getHttpClient().send(request, responseBodyHandler);
             } catch (HttpConnectTimeoutException | ConnectException e) {
-                SingleIpHttpClient finalClient = client;
+                var finalClient = client;
                 LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
                 tried.add(finalClient.getInetAddress());
-                client = roundRobinPool.next().orElse(null);
+                final Optional<SingleIpHttpClient> nextClient = roundRobinPool.next();
+                if (nextClient.isEmpty() || firstClient == nextClient.get()) {
+                    final HttpConnectTimeoutException httpConnectTimeoutException = new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
+                    httpConnectTimeoutException.initCause(e);
+                    throw httpConnectTimeoutException;
+                }
+                client = nextClient.get();
             }
-        } while (firstClient != client && client != null);
-        throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
+        }
     }
 
     @Override
