@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -16,7 +15,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
-import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyStore;
@@ -38,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -528,28 +525,25 @@ class HttpClientPoolTest {
             return scheduledHealthSingleClientRefreshFuture;
         });
 
-        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.1.5.255");
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, firstAddress)));
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(
-                dnsLookupWrapper,
-                scheduledExecutorService,
-                serverConfiguration,
-                inetAddress -> SingleHostHttpClientBuilder
-                        .builder(hostname, inetAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))
+        final RoundRobinPool roudRobinPool = mock(RoundRobinPool.class);
+        final InetAddress inetAddress = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname).iterator().next();
+        when(roudRobinPool.next()).thenReturn(Optional.of(new SingleIpHttpClient(
+                SingleHostHttpClientBuilder
+                        .builder(hostname, inetAddress, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5L)))
                         .withTlsNameMatching((KeyStore) null)
                         .withSni()
-                        .buildWithHostHeader())
-        ) {
-            // Then
-            final HttpClient httpClient = httpClientPool.resilientClient();
-            final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://openjdk.java.net")).build(), HttpResponse.BodyHandlers.discarding());
+                        .buildWithHostHeader(),
+                inetAddress,
+                serverConfiguration)));
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roudRobinPool);
+        final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding());
 
-            final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
-            assertThat(executionException.getCause().getCause().getClass(), anyOf(Matchers.<Class<?>>equalTo(HttpConnectTimeoutException.class), Matchers.equalTo(ConnectException.class)));
-        }
+        final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
+        assertEquals("Cannot connect to the server, the following address were tried without success [" + inetAddress + "].", executionException.getCause().getMessage());
+
     }
 
     @Test

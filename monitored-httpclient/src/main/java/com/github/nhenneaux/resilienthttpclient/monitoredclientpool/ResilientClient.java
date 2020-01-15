@@ -122,7 +122,7 @@ class ResilientClient extends HttpClient {
                     throw new IllegalStateException(throwable);
                 }))
                 .findAny()
-                .orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request in the pool " + roundRobinPool + ". The following address were tried without success " + triedAddress + "."));
+                .orElseThrow(() -> new IllegalStateException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
     }
 
 
