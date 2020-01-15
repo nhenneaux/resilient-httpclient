@@ -24,14 +24,16 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
+import static java.util.function.Predicate.not;
+
 class ResilientClient extends HttpClient {
 
     private static final Logger LOGGER = Logger.getLogger(ResilientClient.class.getName());
-    static final Set<Class<?>> CONNECT_EXCEPTION_CLASS = Set.of(HttpConnectTimeoutException.class, ConnectException.class);
-    private final Supplier<RoundRobinPool> httpClient;
+    private static final Set<Class<?>> CONNECT_EXCEPTION_CLASS = Set.of(HttpConnectTimeoutException.class, ConnectException.class);
+    private final Supplier<RoundRobinPool> roundRobinPoolSupplier;
 
-    ResilientClient(Supplier<RoundRobinPool> httpClient) {
-        this.httpClient = httpClient;
+    ResilientClient(Supplier<RoundRobinPool> roundRobinPoolSupplier) {
+        this.roundRobinPoolSupplier = roundRobinPoolSupplier;
     }
 
     @Override
@@ -39,8 +41,14 @@ class ResilientClient extends HttpClient {
         return httpClient().cookieHandler();
     }
 
-    private HttpClient httpClient() {
-        return httpClient.get().next().orElseThrow().getHttpClient();
+    private static SingleIpHttpClient singleIpHttpClient(RoundRobinPool roundRobinPool) {
+        return roundRobinPool.next().orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request"));
+    }
+
+    static <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, RoundRobinPool roundRobinPool) {
+        final SingleIpHttpClient firstClient = singleIpHttpClient(roundRobinPool);
+        return handleConnectTimeout(send, roundRobinPool, firstClient, new ArrayList<>());
+
     }
 
     @Override
@@ -83,38 +91,27 @@ class ResilientClient extends HttpClient {
         return httpClient().executor();
     }
 
-    @Override
-    public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
-        final ArrayList<InetAddress> tried = new ArrayList<>();
-        for (SingleIpHttpClient singleIpHttpClient : httpClient.get().getList()) {
-            try {
-                return singleIpHttpClient.getHttpClient().send(request, responseBodyHandler);
-            } catch (HttpConnectTimeoutException | ConnectException e) {
-                LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + singleIpHttpClient.getInetAddress() + ", already tried " + tried);
-                tried.add(singleIpHttpClient.getInetAddress());
-            }
-        }
-        throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
-    }
-
-    @Override
-    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
-        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler), httpClient.get().getList());
-
-    }
-
-    static <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, List<SingleIpHttpClient> list) {
-        return send.apply(list.iterator().next().getHttpClient())
-                .exceptionally(throwable -> {
+    @SuppressWarnings("squid:S3864")// Usage of peek method is correct here
+    private static <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(
+            Function<HttpClient, CompletableFuture<HttpResponse<T>>> send,
+            RoundRobinPool roundRobinPool,
+            SingleIpHttpClient firstClient,
+            List<InetAddress> triedAddress
+    ) {
+        return Optional.of(firstClient)
+                .filter(ignored -> triedAddress.isEmpty())
+                .or(() -> roundRobinPool.next().filter(not(firstClient::equals)))
+                .stream()
+                .peek(singleIpHttpClient -> triedAddress.add(singleIpHttpClient.getInetAddress()))
+                .map(SingleIpHttpClient::getHttpClient)
+                .map(send)
+                .map(httpResponseFuture -> httpResponseFuture.exceptionally(throwable -> {
                     if (Optional.ofNullable(throwable.getCause())
                             .map(Object::getClass)
                             .filter(CONNECT_EXCEPTION_CLASS::contains)
                             .isPresent()
                     ) {
-                        if (list.size() == 1) {
-                            throw new IllegalStateException(throwable.getCause());
-                        }
-                        return handleConnectTimeout(send, list.subList(1, list.size())).join();
+                        return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
                     }
                     if (throwable instanceof Error) {
                         throw (Error) throwable;
@@ -123,12 +120,45 @@ class ResilientClient extends HttpClient {
                         throw (RuntimeException) throwable;
                     }
                     throw new IllegalStateException(throwable);
-                });
+                }))
+                .findAny()
+                .orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request in the pool " + roundRobinPool + ". The following address were tried without success " + triedAddress + "."));
+    }
+
+
+    private HttpClient httpClient() {
+        return singleIpHttpClient(roundRobinPoolSupplier.get()).getHttpClient();
+    }
+
+    @Override
+    public <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException, InterruptedException {
+        final RoundRobinPool roundRobinPool = roundRobinPoolSupplier.get();
+        final SingleIpHttpClient firstClient = roundRobinPool.next().orElseThrow(() -> new IllegalStateException("There is no healthy connection to send the request in the pool " + roundRobinPool));
+        final ArrayList<InetAddress> tried = new ArrayList<>();
+
+        SingleIpHttpClient client = firstClient;
+        do {
+            try {
+                return client.getHttpClient().send(request, responseBodyHandler);
+            } catch (HttpConnectTimeoutException | ConnectException e) {
+                SingleIpHttpClient finalClient = client;
+                LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
+                tried.add(finalClient.getInetAddress());
+                client = roundRobinPool.next().orElse(null);
+            }
+        } while (firstClient != client && client != null);
+        throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
+        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler), roundRobinPoolSupplier.get());
+
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler, HttpResponse.PushPromiseHandler<T> pushPromiseHandler) {
-        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler, pushPromiseHandler), httpClient.get().getList());
+        return handleConnectTimeout(httpclient -> httpclient.sendAsync(request, responseBodyHandler, pushPromiseHandler), roundRobinPoolSupplier.get());
     }
 
     @Override
