@@ -64,7 +64,7 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            try (HttpClientPool httpClientPool = HttpClientPoolBuilder.builder(serverConfiguration).build()) {
+            try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
                 await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
 
                 final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
@@ -85,7 +85,7 @@ class HttpClientPoolTest {
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
         String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (HttpClientPool httpClientPool = HttpClientPoolBuilder
+        try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
                 .withSingleHostHttpClientBuilder(inetAddress ->
                         SingleHostHttpClientBuilder
@@ -113,7 +113,7 @@ class HttpClientPoolTest {
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
         String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (HttpClientPool httpClientPool = HttpClientPoolBuilder
+        try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
                 .withSingleHostHttpClientBuilder(inetAddress ->
                         SingleHostHttpClientBuilder
@@ -143,7 +143,7 @@ class HttpClientPoolTest {
     void shouldReturnToString() {
         var hostname = "google.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        try (HttpClientPool httpClientPool = HttpClientPoolBuilder.builder(serverConfiguration)
+        try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration)
                 .withScheduledExecutorService(Executors.newScheduledThreadPool(4))
                 .build()
         ) {
@@ -161,7 +161,7 @@ class HttpClientPoolTest {
         final String hostname = "not.found.host";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final HttpClientPool httpClientPool = HttpClientPoolBuilder.builder(serverConfiguration).withDnsLookupWrapper(dnsLookupWrapper).build();
+        final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withDnsLookupWrapper(dnsLookupWrapper).build();
 
         assertTrue(httpClientPool.getNextHttpClient().isEmpty());
         final HealthCheckResult check = httpClientPool.check();
@@ -177,7 +177,7 @@ class HttpClientPoolTest {
         final List<String> hosts = List.of("openjdk.java.net", "en.wikipedia.org", "cloudflare.com", "facebook.com");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            try (HttpClientPool httpClientPool = HttpClientPoolBuilder.builder(serverConfiguration).build()) {
+            try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
                 await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
                         () -> {
                             final HealthCheckResult checkResult = httpClientPool.check();
@@ -201,7 +201,7 @@ class HttpClientPoolTest {
         });
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         // When
-        try (HttpClientPool ignored = HttpClientPoolBuilder.builder(serverConfiguration)
+        try (HttpClientPool ignored = HttpClientPool.builder(serverConfiguration)
                 .withDnsLookupWrapper(dnsLookupWrapper)
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {
@@ -242,7 +242,7 @@ class HttpClientPoolTest {
 
         mockDns(dnsLookupWrapper, InetAddress.getByName(hostname), Set.of());
         // When
-        try (HttpClientPool ignored = HttpClientPoolBuilder.builder(serverConfiguration)
+        try (HttpClientPool ignored = HttpClientPool.builder(serverConfiguration)
                 .withDnsLookupWrapper(dnsLookupWrapper)
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {
@@ -291,7 +291,7 @@ class HttpClientPoolTest {
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
         // When
-        try (HttpClientPool ignored = HttpClientPoolBuilder.builder(serverConfiguration)
+        try (HttpClientPool ignored = HttpClientPool.builder(serverConfiguration)
                 .withDnsLookupWrapper(dnsLookupWrapper)
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {
@@ -334,7 +334,7 @@ class HttpClientPoolTest {
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
         // When
-        try (HttpClientPool ignored = HttpClientPoolBuilder.builder(serverConfiguration)
+        try (HttpClientPool ignored = HttpClientPool.builder(serverConfiguration)
                 .withDnsLookupWrapper(dnsLookupWrapper)
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {

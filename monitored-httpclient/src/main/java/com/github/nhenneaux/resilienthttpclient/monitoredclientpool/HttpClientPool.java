@@ -61,6 +61,14 @@ public class HttpClientPool implements AutoCloseable {
         refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
     }
 
+    public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
+        return new HttpClientPoolBuilder(serverConfiguration);
+    }
+
+    public static HttpClientPool newHttpClientPool(final ServerConfiguration serverConfiguration) {
+        return new HttpClientPoolBuilder(serverConfiguration).build();
+    }
+
     static boolean validateProperty(String propertyName, int minimumPropertyValueExpected) {
         final String propertyValue = Security.getProperty(propertyName);
 

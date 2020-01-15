@@ -10,8 +10,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
-@SuppressWarnings("WeakerAccess") // Used outside library
-public class HttpClientPoolBuilder {
+@SuppressWarnings("WeakerAccess")
+        // Used outside library
+class HttpClientPoolBuilder {
 
     private final ServerConfiguration serverConfiguration;
 
@@ -19,12 +20,8 @@ public class HttpClientPoolBuilder {
     private ScheduledExecutorService scheduledExecutorService;
     private Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilderFunction;
 
-    private HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
+    HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
-    }
-
-    public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
-        return new HttpClientPoolBuilder(serverConfiguration);
     }
 
     public HttpClientPoolBuilder withDnsLookupWrapper(final DnsLookupWrapper dnsLookupWrapper) {
@@ -61,10 +58,10 @@ public class HttpClientPoolBuilder {
 
     public HttpClientPool build() {
         if (dnsLookupWrapper == null) {
-            dnsLookupWrapper = new DnsLookupWrapper();
+            withDefaultDnsLookupWrapper();
         }
         if (scheduledExecutorService == null) {
-            scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            withDefaultScheduledExecutorService();
         }
         final Function<InetAddress, HttpClient> singleHttpClientProvider;
         if (singleHostHttpClientBuilderFunction == null) {

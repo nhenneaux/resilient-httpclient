@@ -89,7 +89,7 @@ class ResilientClient extends HttpClient {
         for (SingleIpHttpClient singleIpHttpClient : httpClient.get().getList()) {
             try {
                 return singleIpHttpClient.getHttpClient().send(request, responseBodyHandler);
-            } catch (HttpConnectTimeoutException e) {
+            } catch (HttpConnectTimeoutException | ConnectException e) {
                 LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + singleIpHttpClient.getInetAddress() + ", already tried " + tried);
                 tried.add(singleIpHttpClient.getInetAddress());
             }
