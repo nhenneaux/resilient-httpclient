@@ -3,6 +3,8 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,26 +24,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ResilientClientTest {
 
     @Test
-    void send() {
+    void send() throws IOException, InterruptedException {
+        // Given
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
 
         InetAddress hostAddress = mock(InetAddress.class);
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
-        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(UUID.randomUUID().toString())));
-        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
+        final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(UUID.randomUUID().toString())));
+        when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
+        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
+        when(roundRobinPool.getList()).thenReturn(List.of(ipHttpClient));
+
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
-        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> ResilientClient.send(httpRequest, bodyHandler));
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit GET", httpConnectTimeoutException.getMessage());
+        when(httpClient.send(httpRequest, bodyHandler)).thenThrow(new ConnectException());
+        // When
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> resilientClient.send(httpRequest, bodyHandler));
+
+        // Then
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit GET", httpConnectTimeoutException.getMessage());
 
     }
 
@@ -53,10 +65,14 @@ class ResilientClientTest {
         final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
-        final List<SingleIpHttpClient> singleIpHttpClients = List.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
-        when(roundRobinPool.getList()).thenReturn(singleIpHttpClients);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
+        final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
+        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
+        when(roundRobinPool.getList()).thenReturn(List.of(ipHttpClient));
+
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
 
@@ -64,7 +80,7 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> responseFuture = CompletableFuture.completedFuture(httpResponse);
         when(httpClient.sendAsync(httpRequest, bodyHandler)).thenReturn(responseFuture);
         // When
-        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.sendAsync(httpRequest, bodyHandler);
+        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = resilientClient.sendAsync(httpRequest, bodyHandler);
 
         // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler);
@@ -88,10 +104,14 @@ class ResilientClientTest {
         final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
-        final List<SingleIpHttpClient> singleIpHttpClients = List.of(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
-        when(roundRobinPool.getList()).thenReturn(singleIpHttpClients);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
+        final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
+        when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
+        when(roundRobinPool.getList()).thenReturn(List.of(ipHttpClient));
+
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
 
@@ -101,7 +121,7 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> responseFuture = CompletableFuture.completedFuture(httpResponse);
         when(httpClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler)).thenReturn(responseFuture);
         // When
-        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
+        final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = resilientClient.sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
 
         // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
@@ -115,8 +135,8 @@ class ResilientClientTest {
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.cookieHandler();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.cookieHandler();
         verify(httpClient).cookieHandler();
     }
 
@@ -132,8 +152,8 @@ class ResilientClientTest {
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.connectTimeout();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.connectTimeout();
         verify(httpClient).connectTimeout();
     }
 
@@ -143,8 +163,8 @@ class ResilientClientTest {
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.followRedirects();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.followRedirects();
         verify(httpClient).followRedirects();
     }
 
@@ -155,8 +175,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.proxy();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.proxy();
         verify(httpClient).proxy();
     }
 
@@ -167,8 +187,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.sslContext();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.sslContext();
         verify(httpClient).sslContext();
     }
 
@@ -179,9 +199,15 @@ class ResilientClientTest {
         final Error expected = new Error();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
         // Then
         assertSame(expected, completionException.getCause());
+    }
+
+    private SingleIpHttpClient singleIpHttpClientHealthyMock() {
+        final SingleIpHttpClient singleIpHttpClient = mock(SingleIpHttpClient.class);
+        when(singleIpHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        return singleIpHttpClient;
     }
 
     @Test
@@ -191,7 +217,7 @@ class ResilientClientTest {
         final RuntimeException expected = new RuntimeException();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
         // Then
         assertSame(expected, completionException.getCause());
     }
@@ -203,7 +229,7 @@ class ResilientClientTest {
         final Exception expected = new Exception();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, List.of(mock(SingleIpHttpClient.class))).join());
+        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
         // Then
         assertSame(expected, completionException.getCause().getCause());
     }
@@ -215,8 +241,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.sslParameters();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.sslParameters();
         verify(httpClient).sslParameters();
     }
 
@@ -227,8 +253,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.authenticator();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.authenticator();
         verify(httpClient).authenticator();
     }
 
@@ -239,8 +265,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.version();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.version();
         verify(httpClient).version();
     }
 
@@ -251,8 +277,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.executor();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.executor();
         verify(httpClient).executor();
     }
 
@@ -264,8 +290,8 @@ class ResilientClientTest {
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(new SingleIpHttpClient(httpClient, inetAddress(), new ServerConfiguration(UUID.randomUUID().toString())));
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
 
-        final ResilientClient ResilientClient = new ResilientClient(() -> roundRobinPool);
-        ResilientClient.newWebSocketBuilder();
+        final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
+        resilientClient.newWebSocketBuilder();
         verify(httpClient).newWebSocketBuilder();
     }
 }

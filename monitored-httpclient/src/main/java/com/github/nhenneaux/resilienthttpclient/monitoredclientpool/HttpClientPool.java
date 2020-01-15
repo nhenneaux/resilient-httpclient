@@ -167,7 +167,13 @@ public class HttpClientPool implements AutoCloseable {
     }
 
     /**
-     * Return a resilient client
+     * Return a resilient client with the following features.
+     * <p>
+     * <b>DNS failover</b> if an IP resolved by DNS is not reachable it automatically fallbacks to another IP
+     * <p>
+     * <b>Monitored</b> each IP connection to the server is monitored in HTTP
+     * <p>
+     * <b>Load balanced</b>  the traffic is load balanced on DNS records
      */
     public HttpClient resilientClient() {
         return new ResilientClient(this::client);

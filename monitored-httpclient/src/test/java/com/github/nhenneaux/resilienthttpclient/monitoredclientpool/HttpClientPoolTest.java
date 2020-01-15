@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -22,6 +21,7 @@ import java.net.http.HttpResponse;
 import java.security.KeyStore;
 import java.security.Security;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -34,11 +34,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -308,25 +309,7 @@ class HttpClientPoolTest {
         // Given
         final String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
-        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledDnsRefreshFuture;
-        });
-
-        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(
-                any(Runnable.class),
-                eq(0L),
-                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
-                eq(TimeUnit.SECONDS)
-        )).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledHealthSingleClientRefreshFuture;
-        });
+        final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress secondAddress = mock(InetAddress.class);
@@ -406,25 +389,7 @@ class HttpClientPoolTest {
         // Given
         final String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
-        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledDnsRefreshFuture;
-        });
-
-        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(
-                any(Runnable.class),
-                eq(0L),
-                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
-                eq(TimeUnit.SECONDS)
-        )).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledHealthSingleClientRefreshFuture;
-        });
+        final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress firstAddress = mock(InetAddress.class);
@@ -457,25 +422,7 @@ class HttpClientPoolTest {
         // Given
         final String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
-        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledDnsRefreshFuture;
-        });
-
-        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(
-                any(Runnable.class),
-                eq(0L),
-                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
-                eq(TimeUnit.SECONDS)
-        )).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledHealthSingleClientRefreshFuture;
-        });
+        final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress firstAddress = mock(InetAddress.class);
@@ -502,12 +449,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
-    @Timeout(20)
-    void shouldConnectTimeout() {
-        // Given
-        final String hostname = "openjdk.java.net";
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+    private ScheduledExecutorService mockScheduledExecutorService(ServerConfiguration serverConfiguration) {
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
         when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
@@ -527,30 +469,152 @@ class HttpClientPoolTest {
             runnable.run();
             return scheduledHealthSingleClientRefreshFuture;
         });
+        return scheduledExecutorService;
+    }
 
-        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.1.5.255");
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, firstAddress)));
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeout() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
-        try (final HttpClientPool httpClientPool = new HttpClientPool(
-                dnsLookupWrapper,
-                scheduledExecutorService,
-                serverConfiguration,
-                inetAddress -> SingleHostHttpClientBuilder
-                        .builder(hostname, inetAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, optionals);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(Arrays.asList(optionals));
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+        final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding());
+
+        final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
+        assertEquals("Cannot connect to the server, the following address were tried without success " + addresses + ".", executionException.getCause().getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutSync() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, optionals);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(Arrays.asList(optionals));
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutDuplicateAddressList() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        final List<Optional<SingleIpHttpClient>> optionalList = Arrays.asList(optionals);
+        final List<Optional<SingleIpHttpClient>> optionalsDuplicate = new ArrayList<>(optionalList);
+        optionalsDuplicate.addAll(optionalList);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] duplicateClientsArray = optionalsDuplicate.toArray(Optional[]::new);
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, duplicateClientsArray);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+        final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding());
+
+        final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
+        assertEquals("Cannot connect to the server, the following address were tried without success " + addresses + ".", executionException.getCause().getMessage());
+
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeoutEmptyElement() {
+        // Given
+        final String hostname = "amazon.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        mockScheduledExecutorService(serverConfiguration);
+
+        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
+        // When
+        final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
+        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
+                .skip(1)
+                .map(address -> createSingleClient(hostname, serverConfiguration, address))
+                .toArray(Optional[]::new);
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
+        final List<Optional<SingleIpHttpClient>> optionalList = Arrays.asList(optionals);
+        final List<Optional<SingleIpHttpClient>> optionalsDuplicate = new ArrayList<>(optionalList);
+        optionalsDuplicate.add(Optional.empty());
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] clientsArrayWithEmpty = optionalsDuplicate.toArray(Optional[]::new);
+        when(roundRobinPool.next()).thenReturn(firstSingleClient, clientsArrayWithEmpty);
+        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
+        clients.add(firstSingleClient);
+        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+
+        // Then
+        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
+
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
+
+    }
+
+    private Optional<SingleIpHttpClient> createSingleClient(String hostname, ServerConfiguration serverConfiguration, InetAddress address) {
+        final SingleIpHttpClient singleIpHttpClient = spy(new SingleIpHttpClient(
+                SingleHostHttpClientBuilder
+                        .builder(hostname, address, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5L)))
                         .withTlsNameMatching((KeyStore) null)
                         .withSni()
-                        .buildWithHostHeader())
-        ) {
-            // Then
-            final HttpClient httpClient = httpClientPool.resilientClient();
-            final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://openjdk.java.net")).build(), HttpResponse.BodyHandlers.discarding());
-
-            final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
-            assertThat(executionException.getCause().getCause().getClass(), anyOf(Matchers.<Class<?>>equalTo(HttpConnectTimeoutException.class), Matchers.equalTo(ConnectException.class)));
-        }
+                        .buildWithHostHeader(),
+                address,
+                serverConfiguration));
+        when(singleIpHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
+        return Optional.of(singleIpHttpClient);
     }
+
 
     @Test
     @Timeout(20)
@@ -558,25 +622,7 @@ class HttpClientPoolTest {
         // Given
         final String hostname = "openjdk.java.net";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
-        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledDnsRefreshFuture;
-        });
-
-        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
-        when(scheduledExecutorService.scheduleAtFixedRate(
-                any(Runnable.class),
-                eq(0L),
-                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
-                eq(TimeUnit.SECONDS)
-        )).thenAnswer(invocationOnMock -> {
-            final Runnable runnable = invocationOnMock.getArgument(0);
-            runnable.run();
-            return scheduledHealthSingleClientRefreshFuture;
-        });
+        final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
         final InetAddress firstAddress = mock(InetAddress.class);
