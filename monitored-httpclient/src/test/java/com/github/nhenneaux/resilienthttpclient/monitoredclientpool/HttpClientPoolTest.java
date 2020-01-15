@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
@@ -38,6 +40,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -489,6 +492,56 @@ class HttpClientPoolTest {
 
             final HttpResponse<Void> httpResponse = httpResponseAsync.join();
             assertEquals(200, httpResponse.statusCode());
+        }
+    }
+
+    @Test
+    @Timeout(20)
+    void shouldConnectTimeout() {
+        // Given
+        final String hostname = "openjdk.java.net";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledDnsRefreshFuture;
+        });
+
+        final ScheduledFuture<?> scheduledHealthSingleClientRefreshFuture = mock(ScheduledFuture.class);
+        when(scheduledExecutorService.scheduleAtFixedRate(
+                any(Runnable.class),
+                eq(0L),
+                eq(serverConfiguration.getConnectionHealthCheckPeriodInSeconds()),
+                eq(TimeUnit.SECONDS)
+        )).thenAnswer(invocationOnMock -> {
+            final Runnable runnable = invocationOnMock.getArgument(0);
+            runnable.run();
+            return scheduledHealthSingleClientRefreshFuture;
+        });
+
+        final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
+        final InetAddress firstAddress = mock(InetAddress.class);
+        when(firstAddress.getHostAddress()).thenReturn("10.0.0.255");
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, firstAddress)));
+        // When
+        try (final HttpClientPool httpClientPool = new HttpClientPool(
+                dnsLookupWrapper,
+                scheduledExecutorService,
+                serverConfiguration,
+                inetAddress -> SingleHostHttpClientBuilder
+                        .builder(hostname, inetAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1L)))
+                        .withTlsNameMatching((KeyStore) null)
+                        .withSni()
+                        .buildWithHostHeader())
+        ) {
+            // Then
+            final HttpClient httpClient = httpClientPool.resilientClient();
+            final CompletableFuture<HttpResponse<Void>> httpResponseAsync = httpClient.sendAsync(HttpRequest.newBuilder().uri(URI.create("https://openjdk.java.net")).build(), HttpResponse.BodyHandlers.discarding());
+
+            final CompletionException executionException = assertThrows(CompletionException.class, httpResponseAsync::join);
+            assertEquals(ConnectException.class, executionException.getCause().getCause().getClass());
         }
     }
 

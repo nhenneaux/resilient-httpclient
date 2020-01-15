@@ -4,6 +4,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.Authenticator;
+import java.net.ConnectException;
 import java.net.CookieHandler;
 import java.net.InetAddress;
 import java.net.ProxySelector;
@@ -104,9 +105,9 @@ class ResilientClient extends HttpClient {
     private <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, List<SingleIpHttpClient> list) {
         return send.apply(list.iterator().next().getHttpClient())
                 .exceptionally(throwable -> {
-                    if (throwable.getCause() instanceof HttpConnectTimeoutException) {
+                    if (throwable.getCause() instanceof HttpConnectTimeoutException || throwable.getCause() instanceof ConnectException) {
                         if (list.size() == 1) {
-                            throw new IllegalStateException(throwable);
+                            throw new IllegalStateException(throwable.getCause());
                         }
                         return handleConnectTimeout(send, list.subList(1, list.size())).join();
                     }
