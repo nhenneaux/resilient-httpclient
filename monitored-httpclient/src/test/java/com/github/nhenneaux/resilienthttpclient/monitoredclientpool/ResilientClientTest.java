@@ -82,7 +82,7 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = resilientClient.sendAsync(httpRequest, bodyHandler);
 
         // Then
-        verify(httpClient).sendAsync(HttpRequest.newBuilder().uri(URI.create("https://" + hostAddress.getHostAddress() + ":443")).build(), bodyHandler);
+        verify(httpClient).sendAsync(httpRequest, bodyHandler);
         assertSame(httpResponse, httpResponseCompletableFuture.get());
     }
 
