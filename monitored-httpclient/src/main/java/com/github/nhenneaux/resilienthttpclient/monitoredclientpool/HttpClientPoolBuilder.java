@@ -11,8 +11,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 @SuppressWarnings("WeakerAccess")
-        // Used outside library
-class HttpClientPoolBuilder {
+// Used outside library
+public class HttpClientPoolBuilder {
 
     private final ServerConfiguration serverConfiguration;
 
