@@ -8,14 +8,14 @@ public class ServerConfiguration {
     private static final String DEFAULT_HEALTH_PATH = "";
     private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
-    private static final long DEFAULT_READ_TIMEOUT_IN_SECONDS = -1; // It means there is no read timeout
+    private static final long DEFAULT_READ_TIMEOUT_IN_MILLISECONDS = -1; // It means there is no read timeout
 
     private final String hostname;
     private final int port;
     private final String healthPath;
     private final long connectionHealthCheckPeriodInSeconds;
     private final long dnsLookupRefreshPeriodInSeconds;
-    private final long readTimeoutInSeconds;
+    private final long readTimeoutInMilliseconds;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -24,7 +24,7 @@ public class ServerConfiguration {
                 DEFAULT_HEALTH_PATH,
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
-                DEFAULT_READ_TIMEOUT_IN_SECONDS
+                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS
         );
     }
 
@@ -34,14 +34,14 @@ public class ServerConfiguration {
             String healthPath,
             long dnsLookupRefreshPeriodInSeconds,
             long connectionHealthCheckPeriodInSeconds,
-            long readTimeoutInSeconds
+            long readTimeoutInMilliseconds
     ) {
         this.hostname = hostname;
         this.port = port;
         this.healthPath = healthPath;
         this.connectionHealthCheckPeriodInSeconds = connectionHealthCheckPeriodInSeconds;
         this.dnsLookupRefreshPeriodInSeconds = dnsLookupRefreshPeriodInSeconds;
-        this.readTimeoutInSeconds = readTimeoutInSeconds;
+        this.readTimeoutInMilliseconds = readTimeoutInMilliseconds;
     }
 
     /**
@@ -80,10 +80,10 @@ public class ServerConfiguration {
     }
 
     /**
-     * The read timeout in seconds. By default it has a value of "-1" which interpreted as no read timeout specified.
+     * The read timeout in ms. By default it has a value of "-1" which interpreted as no read timeout specified.
      */
-    public long getReadTimeoutInSeconds() {
-        return readTimeoutInSeconds;
+    public long getReadTimeoutInMilliseconds() {
+        return readTimeoutInMilliseconds;
     }
 
     @Override
@@ -94,7 +94,7 @@ public class ServerConfiguration {
                 ", healthPath='" + healthPath + '\'' +
                 ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
                 ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
+                ", readTimeoutInMilliseconds=" + readTimeoutInMilliseconds +
                 '}';
     }
-
 }
