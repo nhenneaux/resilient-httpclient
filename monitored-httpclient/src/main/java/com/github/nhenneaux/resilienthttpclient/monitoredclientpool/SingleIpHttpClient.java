@@ -10,6 +10,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -28,6 +29,7 @@ public class SingleIpHttpClient implements AutoCloseable {
     private final URI healthUri;
     private final AtomicBoolean healthy;
     private final Future<?> scheduledFuture;
+    private final ServerConfiguration serverConfiguration;
 
     /**
      * Create a new instance of the client and schedule a task to refresh is healthiness.
@@ -48,6 +50,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         this.inetAddress = Objects.requireNonNull(inetAddress);
         this.healthUri = healthUri(inetAddress, serverConfiguration);
 
+        this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
 
         final long connectionHealthCheckPeriodInSeconds = serverConfiguration.getConnectionHealthCheckPeriodInSeconds();
@@ -76,6 +79,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         this.inetAddress = Objects.requireNonNull(inetAddress);
         this.healthUri = healthUri(inetAddress, serverConfiguration);
 
+        this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
         this.scheduledFuture = CompletableFuture.completedFuture(null);
         checkHealthStatus();
@@ -99,8 +103,11 @@ public class SingleIpHttpClient implements AutoCloseable {
     void checkHealthStatus() {
         final long start = System.nanoTime();
         try {
-            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(healthUri)
+            final HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder().uri(healthUri);
+            if (serverConfiguration.getReadTimeoutInMilliseconds() >= 0) {
+                httpRequestBuilder.timeout(Duration.ofMillis(serverConfiguration.getReadTimeoutInMilliseconds()));
+            }
+            final int statusCode = httpClient.sendAsync(httpRequestBuilder
                             .build(),
                     HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
