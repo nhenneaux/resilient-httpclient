@@ -204,5 +204,9 @@
             <name>Andrey Lebedev</name>
             <email>andremoniy@gmail.com</email>
         </developer>
+        <developer>
+            <name>Thibaud Ledent</name>
+            <email>thibaudledent@gmail.com</email>
+        </developer>
     </developers>
 </project>
