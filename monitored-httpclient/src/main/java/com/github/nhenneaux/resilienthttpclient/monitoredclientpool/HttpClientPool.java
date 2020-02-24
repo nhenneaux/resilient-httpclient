@@ -52,13 +52,21 @@ public class HttpClientPool implements AutoCloseable {
         // For the new IPs new Http clients will be created
         final long dnsLookupRefreshPeriodInSeconds = serverConfiguration.getDnsLookupRefreshPeriodInSeconds();
         this.scheduledFutureDnsRefresh = scheduledExecutorService.scheduleAtFixedRate(
-                () -> refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService),
+                () -> refreshTheListWrappedInTryCatch(
+                        dnsLookupWrapper,
+                        serverConfiguration,
+                        httpClientsCache,
+                        singleHttpClientProvider,
+                        scheduledExecutorService
+                ),
                 dnsLookupRefreshPeriodInSeconds,
                 dnsLookupRefreshPeriodInSeconds,
                 TimeUnit.SECONDS
         );
 
-        refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
+        // We invoke the same method here as in the scheduler. We don't want constructor to crush in case of a temporary issue.
+        // However for misconfiguration problems it will re-throw an exception and crush the constructor.
+        refreshTheListWrappedInTryCatch(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
     }
 
     public static HttpClientPoolBuilder builder(final ServerConfiguration serverConfiguration) {
@@ -79,6 +87,23 @@ public class HttpClientPool implements AutoCloseable {
             return false;
         }
         return true;
+    }
+
+    private static void refreshTheListWrappedInTryCatch(
+            final DnsLookupWrapper dnsLookupWrapper,
+            final ServerConfiguration serverConfiguration,
+            final AtomicReference<RoundRobinPool> httpClientsCache,
+            final Function<InetAddress, HttpClient> singleHttpClientProvider,
+            final ScheduledExecutorService scheduledExecutorService
+    ) {
+        try {
+            refreshTheList(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
+        } catch (IllegalArgumentException e) {
+            //  IllegalArgumentException means a misconfiguration and has to be re-thrown immediately
+            throw e;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error while refreshing list of IP clients: " + e.getMessage(), e);
+        }
     }
 
     private static void refreshTheList(
@@ -104,7 +129,6 @@ public class HttpClientPool implements AutoCloseable {
             }
             return;
         }
-
 
         httpClientsCache.set(new RoundRobinPool(
                 updatedLookup

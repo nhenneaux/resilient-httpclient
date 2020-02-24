@@ -322,7 +322,7 @@ class HttpClientPoolTest {
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {
             fail();
-        } catch (IllegalStateException expected) {
+        } catch (IllegalArgumentException expected) {
             assertEquals("Cannot build health URI from ServerConfiguration{hostname='openjdk.java.net', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}", expected.getMessage());
         }
         // Then
@@ -676,5 +676,32 @@ class HttpClientPoolTest {
         final String key = "validatePropertyHigherThanBound";
         Security.setProperty(key, "11");
         assertFalse(HttpClientPool.validateProperty(key, 10));
+    }
+
+    @Test
+    void shouldNotStopListRefreshingInCaseOfRuntimeException() throws MalformedURLException, URISyntaxException {
+        final ServerConfiguration serverConfigurationMock = mock(ServerConfiguration.class);
+        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.java.net");
+        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx",  "openjdk.java.net");
+        when(serverConfigurationMock.getDnsLookupRefreshPeriodInSeconds()).thenReturn(1L);
+        when(serverConfigurationMock.getConnectionHealthCheckPeriodInSeconds()).thenReturn(serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
+        when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
+        when(serverConfigurationMock.getPort()).thenReturn(serverConfiguration.getPort());
+        when(serverConfigurationMock.getReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getReadTimeoutInMilliseconds());
+
+        try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfigurationMock)) {
+            await().pollDelay(10, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
+            final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfigurationMock.getPort(), serverConfigurationMock.getHealthPath()).toURI())
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::statusCode)
+                    .join();
+            assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        }
     }
 }

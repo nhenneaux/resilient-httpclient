@@ -92,7 +92,7 @@ class ResilientClientTest {
         final HttpClient httpClient = mock(HttpClient.class);
         final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
-        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
 
