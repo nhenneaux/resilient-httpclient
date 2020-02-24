@@ -114,7 +114,6 @@ public class HttpClientPool implements AutoCloseable {
             final ScheduledExecutorService scheduledExecutorService
     ) {
         final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
-                .map(roundRobin -> httpClientsCache.get())
                 .orElse(RoundRobinPool.EMPTY)
                 .getList();
 
