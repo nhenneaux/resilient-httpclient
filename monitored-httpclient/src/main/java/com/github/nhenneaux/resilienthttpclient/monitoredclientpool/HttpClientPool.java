@@ -88,44 +88,50 @@ public class HttpClientPool implements AutoCloseable {
             final Function<InetAddress, HttpClient> singleHttpClientProvider,
             final ScheduledExecutorService scheduledExecutorService
     ) {
-        final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
-                .map(roundRobin -> httpClientsCache.get())
-                .orElse(RoundRobinPool.EMPTY)
-                .getList();
+        try {
+            final List<SingleIpHttpClient> oldListOfClients = Optional.ofNullable(httpClientsCache.get())
+                    .map(roundRobin -> httpClientsCache.get())
+                    .orElse(RoundRobinPool.EMPTY)
+                    .getList();
 
-        final String hostname = serverConfiguration.getHostname();
+            final String hostname = serverConfiguration.getHostname();
 
-        final Set<InetAddress> updatedLookup = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
-        if (updatedLookup.isEmpty()) {
-            if (oldListOfClients.isEmpty()) {
-                LOGGER.log(Level.SEVERE, "The DNS lookup has returned an empty list of IPs. There is no client in the pool.");
-            } else {
-                LOGGER.log(Level.WARNING, "The DNS lookup has returned an empty list of IPs. Reusing the old list.");
+            final Set<InetAddress> updatedLookup = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
+            if (updatedLookup.isEmpty()) {
+                if (oldListOfClients.isEmpty()) {
+                    LOGGER.log(Level.SEVERE, "The DNS lookup has returned an empty list of IPs. There is no client in the pool.");
+                } else {
+                    LOGGER.log(Level.WARNING, "The DNS lookup has returned an empty list of IPs. Reusing the old list.");
+                }
+                return;
             }
-            return;
+
+            httpClientsCache.set(new RoundRobinPool(
+                    updatedLookup
+                            .stream()
+                            .map(inetAddress -> useOldClientOrCreateNew(
+                                    singleHttpClientProvider,
+                                    inetAddress,
+                                    oldListOfClients,
+                                    serverConfiguration,
+                                    scheduledExecutorService
+                            ))
+                            .collect(Collectors.toUnmodifiableList())
+            ));
+
+            // Close those clients whose inet address is not present anymore
+            oldListOfClients.stream()
+                    .filter(not(client -> updatedLookup.contains(client.getInetAddress())))
+                    .forEach(oldClient -> {
+                        LOGGER.log(Level.INFO, () -> "The IP " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " is not present in the DNS resolution list any more, closing the HttpClient");
+                        oldClient.close();
+                    });
+        } catch (IllegalArgumentException e) {
+            //  IllegalArgumentException means a misconfiguration and has to be re-thrown immediately
+            throw e;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error while refreshing list of IP clients: " + e.getMessage(), e);
         }
-
-
-        httpClientsCache.set(new RoundRobinPool(
-                updatedLookup
-                        .stream()
-                        .map(inetAddress -> useOldClientOrCreateNew(
-                                singleHttpClientProvider,
-                                inetAddress,
-                                oldListOfClients,
-                                serverConfiguration,
-                                scheduledExecutorService
-                        ))
-                        .collect(Collectors.toUnmodifiableList())
-        ));
-
-        // Close those clients whose inet address is not present anymore
-        oldListOfClients.stream()
-                .filter(not(client -> updatedLookup.contains(client.getInetAddress())))
-                .forEach(oldClient -> {
-                    LOGGER.log(Level.INFO, () -> "The IP " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " is not present in the DNS resolution list any more, closing the HttpClient");
-                    oldClient.close();
-                });
     }
 
     private static SingleIpHttpClient useOldClientOrCreateNew(

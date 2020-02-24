@@ -322,7 +322,7 @@ class HttpClientPoolTest {
                 .withScheduledExecutorService(scheduledExecutorService)
                 .build()) {
             fail();
-        } catch (IllegalStateException expected) {
+        } catch (IllegalArgumentException expected) {
             assertEquals("Cannot build health URI from ServerConfiguration{hostname='openjdk.java.net', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}", expected.getMessage());
         }
         // Then
