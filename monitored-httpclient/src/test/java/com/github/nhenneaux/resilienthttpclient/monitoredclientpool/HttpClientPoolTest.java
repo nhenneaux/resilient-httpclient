@@ -141,19 +141,18 @@ class HttpClientPoolTest {
     }
 
     @Test
-    void shouldReturnToString() {
+    void whenCreatingAnHttpClientPoolWithAValidHostnameThenThePoolShoudBeNonEmptyAndHealthy() {
         var hostname = "google.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration)
                 .withScheduledExecutorService(Executors.newScheduledThreadPool(4))
                 .build()
         ) {
-            assertTrue(httpClientPool.getNextHttpClient().isEmpty());
+            assertFalse(httpClientPool.getNextHttpClient().isEmpty());
+            assertTrue(httpClientPool.getNextHttpClient().get().isHealthy());
             assertThat(httpClientPool.check().getDetails().toString(), containsString("SingleIpHttpClient{inetAddress=google.com"));
-            assertEquals(HealthCheckResult.HealthStatus.ERROR, httpClientPool.check().getStatus());
-
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=-1}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
+                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
         }
     }
 
@@ -375,7 +374,7 @@ class HttpClientPoolTest {
             verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
 
             await()
-                    .atMost(Duration.ofSeconds(2L))
+                    .atMost(Duration.ofSeconds(5L))
                     .until(() -> httpClientPool.check().getStatus() == HealthCheckResult.HealthStatus.WARNING);
 
             assertEquals(HealthCheckResult.HealthStatus.WARNING, httpClientPool.check().getStatus());

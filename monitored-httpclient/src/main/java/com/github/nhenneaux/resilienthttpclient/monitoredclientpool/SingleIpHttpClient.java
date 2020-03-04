@@ -94,13 +94,11 @@ public class SingleIpHttpClient implements AutoCloseable {
     }
 
     /**
-     * Should call checkHealthStatus() if healthy.get() is false.
-     * Otherwise just return healthy.get().
+     * If healthy.get() is false, a new health check must be done
      */
     public boolean isHealthy() {
-        if(!healthy.get()) {
+        if (!healthy.get())
             checkHealthStatus();
-        }
         return healthy.get();
     }
 
