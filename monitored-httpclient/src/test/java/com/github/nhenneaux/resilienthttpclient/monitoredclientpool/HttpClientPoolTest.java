@@ -141,7 +141,7 @@ class HttpClientPoolTest {
     }
 
     @Test
-    void whenCreatingAnHttpClientPoolWithAValidHostnameThenThePoolShoudBeNonEmptyAndHealthy() {
+    void shouldReturnToString() {
         var hostname = "google.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration)
@@ -149,8 +149,8 @@ class HttpClientPoolTest {
                 .build()
         ) {
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertTrue(httpClientPool.getNextHttpClient().get().isHealthy());
             assertThat(httpClientPool.check().getDetails().toString(), containsString("SingleIpHttpClient{inetAddress=google.com"));
+
             assertThat(httpClientPool.toString(),
                     allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
         }

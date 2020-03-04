@@ -110,10 +110,9 @@ class SingleIpHttpClientTest {
         // Given
         final String hostname = "cloudflare.com";
         final HttpClient httpClient = mock(HttpClient.class);
-        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(500);
-        when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        when(httpClient.sendAsync(any(HttpRequest.class), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
@@ -128,10 +127,9 @@ class SingleIpHttpClientTest {
         // Given
         final String hostname = "cloudflare.com";
         final HttpClient httpClient = mock(HttpClient.class);
-        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.sendAsync(captor.capture(), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        when(httpClient.sendAsync(any(HttpRequest.class), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
             // Then
