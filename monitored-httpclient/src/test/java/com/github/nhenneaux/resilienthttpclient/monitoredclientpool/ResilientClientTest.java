@@ -23,10 +23,11 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 class ResilientClientTest {
 
@@ -40,6 +41,8 @@ class ResilientClientTest {
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(UUID.randomUUID().toString())));
+
+        doNothing().when(ipHttpClient).checkHealthStatus();
         when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
@@ -67,6 +70,7 @@ class ResilientClientTest {
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        doNothing().when(ipHttpClient).checkHealthStatus();
         when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);
@@ -106,6 +110,7 @@ class ResilientClientTest {
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        doNothing().when(ipHttpClient).checkHealthStatus();
         when(ipHttpClient.isHealthy()).thenReturn(Boolean.TRUE);
         final Optional<SingleIpHttpClient> singleIpHttpClient = Optional.of(ipHttpClient);
         when(roundRobinPool.next()).thenReturn(singleIpHttpClient);

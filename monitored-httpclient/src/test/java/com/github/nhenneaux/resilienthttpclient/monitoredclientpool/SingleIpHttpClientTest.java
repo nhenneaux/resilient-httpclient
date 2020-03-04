@@ -19,8 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 class SingleIpHttpClientTest {
     @SuppressWarnings("unchecked")
@@ -101,5 +103,39 @@ class SingleIpHttpClientTest {
         // When - Then
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, InetAddress.getLocalHost(), new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1)));
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, readTimeoutInMilliseconds=-1}", illegalStateException.getMessage());
+    }
+
+    @Test
+    void shouldCallCheckHealthStatusIfHealthyIsFalse() {
+        // Given
+        final String hostname = "cloudflare.com";
+        final HttpClient httpClient = mock(HttpClient.class);
+        @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(500);
+        when(httpClient.sendAsync(any(HttpRequest.class), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        // When
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
+            // Then
+            assertSame(httpClient, singleIpHttpClient.getHttpClient());
+            assertFalse(singleIpHttpClient.isHealthy());
+            verify(httpClient, times(2)).sendAsync(any(),any());
+        }
+    }
+
+    @Test
+    void shouldntCallCheckHealthStatusIfHealthyIsTrue() {
+        // Given
+        final String hostname = "cloudflare.com";
+        final HttpClient httpClient = mock(HttpClient.class);
+        @SuppressWarnings("unchecked") final HttpResponse<String> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.sendAsync(any(HttpRequest.class), any(STRING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        // When
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), new ServerConfiguration(hostname))) {
+            // Then
+            assertSame(httpClient, singleIpHttpClient.getHttpClient());
+            assertTrue(singleIpHttpClient.isHealthy());
+            verify(httpClient, times(1)).sendAsync(any(),any());
+        }
     }
 }
