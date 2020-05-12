@@ -122,7 +122,7 @@ public class SingleIpHttpClient implements AutoCloseable {
             LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
             healthy.set(statusCode >= 200 && statusCode <= 499);
         } catch (RuntimeException e) {
-            LOGGER.log(Level.WARNING, "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start), e);
+            LOGGER.log(Level.WARNING, e, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start));
             healthy.set(false);
         }
     }
@@ -133,6 +133,16 @@ public class SingleIpHttpClient implements AutoCloseable {
 
     public InetAddress getInetAddress() {
         return inetAddress;
+    }
+
+    @SuppressWarnings("unused") // Used in health details
+    public AtomicBoolean getHealthy() {
+        return healthy;
+    }
+
+    @SuppressWarnings("unused") // Used in health details
+    public URI getHealthUri() {
+        return healthUri;
     }
 
     public HttpClient getHttpClient() {

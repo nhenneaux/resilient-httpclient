@@ -102,7 +102,7 @@ public class HttpClientPool implements AutoCloseable {
             //  IllegalArgumentException means a misconfiguration and has to be re-thrown immediately
             throw e;
         } catch (RuntimeException e) {
-            LOGGER.log(Level.SEVERE, "Error while refreshing list of IP clients: " + e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, e, () -> "Error while refreshing list of IP clients: " + e.getMessage());
         }
     }
 
@@ -228,11 +228,7 @@ public class HttpClientPool implements AutoCloseable {
         }
         LOGGER.log(Level.FINE, () -> "HTTP clients pool health is " + status);
 
-        return new HealthCheckResult(status,
-                clients
-                        .stream()
-                        .map(SingleIpHttpClient::toString)
-                        .collect(Collectors.toList()));
+        return new HealthCheckResult(status, clients);
     }
 
     @Override
