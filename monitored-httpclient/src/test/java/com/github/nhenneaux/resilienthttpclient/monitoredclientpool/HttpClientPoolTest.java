@@ -88,11 +88,13 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClientBuilder(inetAddress ->
+                .withSingleHostHttpClient(inetAddress ->
                         SingleHostHttpClientBuilder
                                 .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching()
-                                .withSni())
+                                .withSni()
+                                .buildWithHostHeader()
+                )
                 .build()
         ) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -116,12 +118,12 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClientBuilder(inetAddress ->
+                .withSingleHostHttpClient(inetAddress ->
                         SingleHostHttpClientBuilder
                                 .builder(hostname, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching((KeyStore) null)
                                 .withSni()
-
+                                .build()
                 )
                 .build()) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());

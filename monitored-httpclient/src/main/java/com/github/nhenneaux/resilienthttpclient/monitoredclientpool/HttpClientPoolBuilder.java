@@ -18,7 +18,7 @@ public class HttpClientPoolBuilder {
 
     private DnsLookupWrapper dnsLookupWrapper;
     private ScheduledExecutorService scheduledExecutorService;
-    private Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilderFunction;
+    private Function<InetAddress, HttpClient> singleHostHttpClientFunction;
 
     HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
@@ -50,8 +50,8 @@ public class HttpClientPoolBuilder {
         return this;
     }
 
-    public HttpClientPoolBuilder withSingleHostHttpClientBuilder(final Function<InetAddress, SingleHostHttpClientBuilder> singleHostHttpClientBuilder) {
-        this.singleHostHttpClientBuilderFunction = singleHostHttpClientBuilder;
+    public HttpClientPoolBuilder withSingleHostHttpClient(final Function<InetAddress, HttpClient> singleHostHttpClientFunction) {
+        this.singleHostHttpClientFunction = singleHostHttpClientFunction;
         return this;
     }
 
@@ -64,10 +64,10 @@ public class HttpClientPoolBuilder {
             withDefaultScheduledExecutorService();
         }
         final Function<InetAddress, HttpClient> singleHttpClientProvider;
-        if (singleHostHttpClientBuilderFunction == null) {
+        if (singleHostHttpClientFunction == null) {
             singleHttpClientProvider = (InetAddress inetAddress) -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
         } else {
-            singleHttpClientProvider = (InetAddress inetAddress) -> singleHostHttpClientBuilderFunction.apply(inetAddress).build();
+            singleHttpClientProvider = (InetAddress inetAddress) -> singleHostHttpClientFunction.apply(inetAddress);
         }
 
         return new HttpClientPool(
