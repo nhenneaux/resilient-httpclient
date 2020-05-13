@@ -97,7 +97,7 @@ public class SingleIpHttpClient implements AutoCloseable {
      * If called and the previous health status was unhealthy, then a new health check is performed.
      */
     public boolean isHealthy() {
-        if(!healthy.get()) {
+        if (!healthy.get()) {
             checkHealthStatus();
         }
         return healthy.get();
@@ -131,18 +131,20 @@ public class SingleIpHttpClient implements AutoCloseable {
         return " in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms.";
     }
 
-    public InetAddress getInetAddress() {
+    InetAddress getInetAddress() {
         return inetAddress;
     }
 
-    @SuppressWarnings("unused") // Used in health details
-    public AtomicBoolean getHealthy() {
+    AtomicBoolean getHealthy() {
         return healthy;
     }
 
-    @SuppressWarnings("unused") // Used in health details
-    public URI getHealthUri() {
+    URI getHealthUri() {
         return healthUri;
+    }
+
+    String getHostname() {
+        return serverConfiguration.getHostname();
     }
 
     public HttpClient getHttpClient() {
@@ -153,6 +155,8 @@ public class SingleIpHttpClient implements AutoCloseable {
     public String toString() {
         return "SingleIpHttpClient{" +
                 "inetAddress=" + inetAddress +
+                ", healthy=" + healthy +
+                ", hostname=" + serverConfiguration.getHostname() +
                 ", healthUri=" + healthUri +
                 '}';
     }

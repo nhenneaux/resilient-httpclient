@@ -1,19 +1,21 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
+import java.util.List;
+
 public class HealthCheckResult {
     private final HealthStatus status;
-    private final Object details;
+    private final List<ConnectionDetail> details;
 
-    public HealthCheckResult(HealthStatus status, Object details) {
+    public HealthCheckResult(HealthStatus status, List<ConnectionDetail> details) {
         this.status = status;
-        this.details = details;
+        this.details = List.copyOf(details);
     }
 
     public HealthStatus getStatus() {
         return status;
     }
 
-    public Object getDetails() {
+    public List<ConnectionDetail> getDetails() {
         return details;
     }
 
