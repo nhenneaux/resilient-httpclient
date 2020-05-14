@@ -1,18 +1,17 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
-import java.net.InetAddress;
 import java.net.URI;
 
 public class ConnectionDetail {
 
     private final String hostname;
-    private final InetAddress inetAddress;
+    private final String hostAddress;
     private final URI healthUri;
     private final boolean healthy;
 
-    public ConnectionDetail(String hostname, InetAddress inetAddress, URI healthUri, boolean healthy) {
+    public ConnectionDetail(String hostname, String hostAddress, URI healthUri, boolean healthy) {
         this.hostname = hostname;
-        this.inetAddress = inetAddress;
+        this.hostAddress = hostAddress;
         this.healthUri = healthUri;
         this.healthy = healthy;
     }
@@ -21,8 +20,8 @@ public class ConnectionDetail {
         return hostname;
     }
 
-    public InetAddress getInetAddress() {
-        return inetAddress;
+    public String getHostAddress() {
+        return hostAddress;
     }
 
     public URI getHealthUri() {
@@ -37,7 +36,7 @@ public class ConnectionDetail {
     public String toString() {
         return "ConnectionDetail{" +
                 "hostname='" + hostname + '\'' +
-                ", inetAddress=" + inetAddress +
+                ", hostAddress=" + hostAddress +
                 ", healthUri=" + healthUri +
                 ", healthy=" + healthy +
                 '}';

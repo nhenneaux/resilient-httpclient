@@ -229,7 +229,7 @@ public class HttpClientPool implements AutoCloseable {
         LOGGER.log(Level.FINE, () -> "HTTP clients pool health is " + status);
 
 
-        return new HealthCheckResult(status, clients.stream().map(client -> new ConnectionDetail(client.getHostname(), client.getInetAddress(), client.getHealthUri(), client.getHealthy().get())).collect(Collectors.toUnmodifiableList()));
+        return new HealthCheckResult(status, clients.stream().map(client -> new ConnectionDetail(client.getHostname(), client.getInetAddress().getHostAddress(), client.getHealthUri(), client.getHealthy().get())).collect(Collectors.toUnmodifiableList()));
     }
 
     @Override
