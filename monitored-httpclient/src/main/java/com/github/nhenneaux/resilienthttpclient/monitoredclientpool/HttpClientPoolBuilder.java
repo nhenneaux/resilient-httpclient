@@ -65,9 +65,9 @@ public class HttpClientPoolBuilder {
         }
         final Function<InetAddress, HttpClient> singleHttpClientProvider;
         if (singleHostHttpClientFunction == null) {
-            singleHttpClientProvider = (InetAddress inetAddress) -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
+            singleHttpClientProvider = inetAddress -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
         } else {
-            singleHttpClientProvider = (InetAddress inetAddress) -> singleHostHttpClientFunction.apply(inetAddress);
+            singleHttpClientProvider = inetAddress -> singleHostHttpClientFunction.apply(inetAddress);
         }
 
         return new HttpClientPool(

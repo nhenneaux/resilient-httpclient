@@ -45,11 +45,9 @@ public class SingleIpHttpClient implements AutoCloseable {
             ServerConfiguration serverConfiguration,
             ScheduledExecutorService scheduledExecutorService
     ) {
-        Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        this.healthUri = healthUri(inetAddress, serverConfiguration);
-
+        this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
 
@@ -74,20 +72,19 @@ public class SingleIpHttpClient implements AutoCloseable {
             InetAddress inetAddress,
             ServerConfiguration serverConfiguration
     ) {
-        Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        this.healthUri = healthUri(inetAddress, serverConfiguration);
-
+        this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
+
         this.scheduledFuture = CompletableFuture.completedFuture(null);
         checkHealthStatus();
     }
 
-    private URI healthUri(InetAddress inetAddress, ServerConfiguration serverConfiguration) {
+    private URI healthUri(ServerConfiguration serverConfiguration) {
         try {
-            return new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+            return new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
         } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalArgumentException("Cannot build health URI from " + serverConfiguration, e);
         }
