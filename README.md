@@ -5,8 +5,7 @@ Java HTTP client with pooling and auto refresh of underlying IP addresses.
 
 # Usage
 ```java
-HttpClientPool singletonByHost = HttpClientPool.newHttpClientPool(
-                                                        new ServerConfiguration("openjdk.java.net"));
+HttpClientPool singletonByHost = HttpClientPool.newHttpClientPool(new ServerConfiguration("openjdk.java.net"));
 java.net.http.HttpClient resilientClient = singletonByHost.resilientClient();
 
 HttpRequest request = HttpRequest.newBuilder()
