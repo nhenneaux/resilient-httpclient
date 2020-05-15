@@ -93,7 +93,7 @@ class SingleHostHttpClientBuilderTest {
 
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
+                .uri(URI.create("https://" + hostname))
                 .build();
 
 
