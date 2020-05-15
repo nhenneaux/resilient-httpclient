@@ -49,6 +49,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -768,9 +769,11 @@ class HttpClientPoolTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://openjdk.java.net/"))
                 .build();
-        resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        final String response = resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
-                .thenAccept(System.out::println)
                 .join();
+
+        assertNotNull(response);
     }
+
 }
