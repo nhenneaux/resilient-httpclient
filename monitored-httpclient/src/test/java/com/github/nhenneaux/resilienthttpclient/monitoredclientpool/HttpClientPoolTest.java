@@ -81,7 +81,7 @@ class HttpClientPoolTest {
                 final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
                 final HttpClient httpClient = singleIpHttpClient.getHttpClient();
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
                                 .build(),
                         HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
@@ -112,7 +112,7 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                            .uri(new URL("https", hostname, serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
                             .build(),
                     HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
@@ -737,6 +737,20 @@ class HttpClientPoolTest {
                     .thenApply(HttpResponse::statusCode)
                     .join();
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        }
+    }
+
+    static class Example {
+        public static void main(String[] args) {
+            HttpClientPool singleInstanceByTargetHost = HttpClientPool.newHttpClientPool(new ServerConfiguration("openjdk.java.net"));
+            HttpClient resilientClient = singleInstanceByTargetHost.resilientClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://openjdk.java.net/"))
+                    .build();
+            resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .thenAccept(System.out::println)
+                    .join();
         }
     }
 }
