@@ -30,6 +30,17 @@ public class ServerConfiguration {
 
     public ServerConfiguration(
             String hostname,
+            int port
+    ) {
+        this(hostname, port,
+                DEFAULT_HEALTH_PATH,
+                DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
+                DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
+                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS);
+    }
+
+    public ServerConfiguration(
+            String hostname,
             int port,
             String healthPath,
             long dnsLookupRefreshPeriodInSeconds,

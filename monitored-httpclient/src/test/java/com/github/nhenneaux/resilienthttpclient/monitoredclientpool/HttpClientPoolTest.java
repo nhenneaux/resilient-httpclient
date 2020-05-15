@@ -75,13 +75,33 @@ class HttpClientPoolTest {
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
-                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
 
                 final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
                 final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
                 final HttpClient httpClient = singleIpHttpClient.getHttpClient();
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
                                 .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString())
+                        .thenApply(HttpResponse::statusCode)
+                        .join();
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
+        }
+    }
+
+    @Test
+    void resilientClient() throws MalformedURLException, URISyntaxException {
+        final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+        for (String hostname : hosts) {
+            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
+            try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+                final HttpClient httpClient = httpClientPool.resilientClient();
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
                                 .build(),
                         HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
@@ -740,17 +760,16 @@ class HttpClientPoolTest {
         }
     }
 
-    static class Example {
-        public static void main(String[] args) {
-            HttpClientPool singleInstanceByTargetHost = HttpClientPool.newHttpClientPool(new ServerConfiguration("openjdk.java.net"));
-            HttpClient resilientClient = singleInstanceByTargetHost.resilientClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://openjdk.java.net/"))
-                    .build();
-            resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .thenAccept(System.out::println)
-                    .join();
-        }
+    @Test
+    void readme() {
+        HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(new ServerConfiguration("openjdk.java.net"));
+        HttpClient resilientClient = singleInstanceByHost.resilientClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://openjdk.java.net/"))
+                .build();
+        resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(System.out::println)
+                .join();
     }
 }
