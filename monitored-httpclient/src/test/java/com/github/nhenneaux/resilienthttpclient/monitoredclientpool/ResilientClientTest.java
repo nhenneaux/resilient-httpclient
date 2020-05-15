@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -23,11 +24,11 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ResilientClientTest {
 
@@ -96,7 +97,22 @@ class ResilientClientTest {
         final HttpClient httpClient = mock(HttpClient.class);
         final String hostname = UUID.randomUUID().toString();
         InetAddress hostAddress = mock(InetAddress.class);
-        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
+        final ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
+        when(serverConfiguration.getHostname()).thenReturn(hostname);
+        when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
+        when(serverConfiguration.getPort()).thenReturn(-10);
+        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, serverConfiguration));
+        assertEquals(MalformedURLException.class, illegalStateException.getCause().getClass());
+    }
+
+    @Test
+    void throwForInvalidUrlSyntax() {
+        final HttpClient httpClient = mock(HttpClient.class);
+        InetAddress hostAddress = mock(InetAddress.class);
+        final ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
+        when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
+        when(serverConfiguration.getPort()).thenReturn(-1);
+        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(null)));
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
 
