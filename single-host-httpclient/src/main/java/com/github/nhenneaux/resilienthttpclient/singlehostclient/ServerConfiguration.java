@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ServerConfiguration {
 
-    private static final int DEFAULT_PORT = 443;
+    private static final int DEFAULT_PORT = -1;
     private static final String DEFAULT_HEALTH_PATH = "";
     private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
@@ -52,7 +52,7 @@ public class ServerConfiguration {
     }
 
     /**
-     * The TCP port of the HTTP client.
+     * The TCP port of the HTTP client, -1 if the port is not set.
      */
     public int getPort() {
         return port;
