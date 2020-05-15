@@ -762,7 +762,8 @@ class HttpClientPoolTest {
 
     @Test
     void readme() {
-        HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(new ServerConfiguration("openjdk.java.net"));
+        HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
+                new ServerConfiguration("openjdk.java.net"));
         HttpClient resilientClient = singleInstanceByHost.resilientClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://openjdk.java.net/"))

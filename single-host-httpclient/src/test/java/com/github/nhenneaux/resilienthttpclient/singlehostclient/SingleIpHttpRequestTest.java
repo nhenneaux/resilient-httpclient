@@ -21,7 +21,6 @@ class SingleIpHttpRequestTest {
 
     @Test
     void bodyPublisher() {
-        final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
@@ -30,7 +29,6 @@ class SingleIpHttpRequestTest {
 
     @Test
     void method() {
-        final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
@@ -39,7 +37,6 @@ class SingleIpHttpRequestTest {
 
     @Test
     void timeout() {
-        final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
@@ -48,7 +45,6 @@ class SingleIpHttpRequestTest {
 
     @Test
     void expectContinue() {
-        final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
@@ -77,7 +73,6 @@ class SingleIpHttpRequestTest {
 
     @Test
     void version() {
-        final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
