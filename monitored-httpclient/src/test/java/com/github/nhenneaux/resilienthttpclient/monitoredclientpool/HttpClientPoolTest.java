@@ -161,7 +161,7 @@ class HttpClientPoolTest {
                 .build()
         ) {
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='google.com', inetAddress=google.com/", ", healthUri=https://", ":443, healthy=true}, ConnectionDetail{hostname='google.com', inetAddress=google.com/", ", healthUri=https://", ":443, healthy="));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ":443, healthy=true}, ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ":443, healthy="));
 
             assertThat(httpClientPool.toString(),
                     allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
@@ -212,7 +212,7 @@ class HttpClientPoolTest {
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
                     );
-            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"OK\",\"details\":[{\"hostname\":\"openjdk.java.net\",\"inetAddress\":\"openjdk.java.net\",\"healthUri\":\"", "\",\"healthy\":true}]}"));
+            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"OK\",\"details\":[{\"hostname\":\"openjdk.java.net\",\"hostAddress\":\"", "\",\"healthUri\":\"", "\",\"healthy\":true}]}"));
         }
     }
 
