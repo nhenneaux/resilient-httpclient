@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.net.http.HttpRequest;
 import java.util.List;
 import java.util.Map;
@@ -92,5 +93,14 @@ class SingleIpHttpRequestTest {
         final Map<String, List<String>> headers = singleIpHttpRequest.headers().map();
         assertEquals(1, headers.size());
         assertEquals(List.of(hostname), headers.get("host"));
+    }
+
+    @Test
+    void properToString() throws UnknownHostException {
+        final String hostname = UUID.randomUUID().toString();
+        final InetAddress hostAddress = InetAddress.getByName("localhost");
+        final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.properToString.junit")).build();
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        assertEquals("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.properToString.junit https://127.0.0.1 GET", singleIpHttpRequest.toString());
     }
 }

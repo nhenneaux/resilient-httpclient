@@ -76,6 +76,6 @@ class SingleIpHttpRequest extends HttpRequest {
 
     @Override
     public String toString() {
-        return (uri() == null ? "" : uri().toString()) + " " + method();
+        return (uri() == null ? "" : httpRequest.uri() + " " + uri().toString()) + " " + method();
     }
 }
