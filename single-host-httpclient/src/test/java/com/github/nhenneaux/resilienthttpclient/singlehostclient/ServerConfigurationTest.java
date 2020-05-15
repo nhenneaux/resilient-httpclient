@@ -15,7 +15,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals("hostname", serverConfiguration.getHostname());
         Assertions.assertEquals(30L, serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         Assertions.assertEquals(300L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
-        Assertions.assertEquals(443, serverConfiguration.getPort());
+        Assertions.assertEquals(-1, serverConfiguration.getPort());
         Assertions.assertEquals(-1, serverConfiguration.getReadTimeoutInMilliseconds());
     }
 
