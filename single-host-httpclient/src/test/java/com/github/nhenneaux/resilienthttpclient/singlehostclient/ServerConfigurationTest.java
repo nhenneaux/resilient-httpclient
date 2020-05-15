@@ -20,7 +20,21 @@ class ServerConfigurationTest {
     }
 
     @Test
-    void shouldProperlyReturnConfiguredValues( ) {
+    void shouldProperlyReturnDefaultValuesWithPort() {
+        // Given
+        final ServerConfiguration serverConfiguration = new ServerConfiguration("hostname", 1234);
+
+        // When-Then
+        Assertions.assertEquals("", serverConfiguration.getHealthPath());
+        Assertions.assertEquals("hostname", serverConfiguration.getHostname());
+        Assertions.assertEquals(30L, serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
+        Assertions.assertEquals(300L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
+        Assertions.assertEquals(1234, serverConfiguration.getPort());
+        Assertions.assertEquals(-1, serverConfiguration.getReadTimeoutInMilliseconds());
+    }
+
+    @Test
+    void shouldProperlyReturnConfiguredValues() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration(
                 "hostname",

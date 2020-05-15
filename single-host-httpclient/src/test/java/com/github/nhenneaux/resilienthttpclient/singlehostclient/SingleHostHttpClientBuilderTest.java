@@ -7,6 +7,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -44,6 +45,31 @@ class SingleHostHttpClientBuilderTest {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://" + ip))
+                    .build();
+
+
+            // When
+            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .join();
+
+            // Then
+            assertNotNull(response);
+        }
+    }
+
+    @Test
+    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort() throws URISyntaxException {
+        // Given
+        final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+        for (String hostname : hosts) {
+            final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
+
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https", "", hostname, 443, "", "", ""))
                     .build();
 
 
