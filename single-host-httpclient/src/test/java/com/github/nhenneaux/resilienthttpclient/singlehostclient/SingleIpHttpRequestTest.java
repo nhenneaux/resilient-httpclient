@@ -23,7 +23,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertSame(request.bodyPublisher(), singleIpHttpRequest.bodyPublisher());
     }
 
@@ -32,7 +32,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertSame(request.method(), singleIpHttpRequest.method());
     }
 
@@ -41,7 +41,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertSame(request.timeout(), singleIpHttpRequest.timeout());
     }
 
@@ -50,7 +50,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertSame(request.expectContinue(), singleIpHttpRequest.expectContinue());
     }
 
@@ -60,7 +60,7 @@ class SingleIpHttpRequestTest {
         final InetAddress hostAddress = mock(InetAddress.class);
         when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertEquals(new URI("https://" + hostAddress.getHostAddress()), singleIpHttpRequest.uri());
     }
 
@@ -69,7 +69,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, singleIpHttpRequest::uri);
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
@@ -79,7 +79,7 @@ class SingleIpHttpRequestTest {
         final String hostname = UUID.randomUUID().toString();
         final InetAddress hostAddress = mock(InetAddress.class);
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
-        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress, hostname);
+        final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertSame(request.version(), singleIpHttpRequest.version());
     }
 

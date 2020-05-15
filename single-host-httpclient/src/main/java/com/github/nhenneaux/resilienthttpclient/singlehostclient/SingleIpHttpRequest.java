@@ -20,11 +20,11 @@ class SingleIpHttpRequest extends HttpRequest {
     private final InetAddress hostAddress;
     private final HttpHeaders headers;
 
-    SingleIpHttpRequest(HttpRequest httpRequest, InetAddress hostAddress, String hostname) {
+    SingleIpHttpRequest(HttpRequest httpRequest, InetAddress hostAddress, String hostHeader) {
         this.httpRequest = httpRequest;
         this.hostAddress = hostAddress;
         final Map<String, List<String>> headerMap = new HashMap<>(httpRequest.headers().map());
-        headerMap.put(HOST_HEADER, List.of(hostname));
+        headerMap.put(HOST_HEADER, List.of(hostHeader));
         this.headers = HttpHeaders.of(headerMap, (s, s2) -> true);
     }
 
@@ -74,5 +74,8 @@ class SingleIpHttpRequest extends HttpRequest {
         return headers;
     }
 
-
+    @Override
+    public String toString() {
+        return (uri() == null ? "" : uri().toString()) + " " + method();
+    }
 }

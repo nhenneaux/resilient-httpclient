@@ -5,7 +5,6 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
-import java.net.InetAddress;
 import java.net.ProxySelector;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,15 +20,11 @@ public class HttpClientWrapper extends HttpClient {
     private final HttpClient httpClient;
     private final Function<HttpRequest, SingleIpHttpRequest> requestWrapper;
 
-    HttpClientWrapper(HttpClient httpClient, InetAddress hostAddress, String hostname) {
+    HttpClientWrapper(HttpClient httpClient, Function<HttpRequest, SingleIpHttpRequest> requestWrapper) {
         this.httpClient = httpClient;
-        this.requestWrapper = httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, hostname);
+        this.requestWrapper = requestWrapper;
     }
 
-    HttpClientWrapper(HttpClient httpClient, InetAddress hostAddress) {
-        this.httpClient = httpClient;
-        this.requestWrapper = httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress);
-    }
 
     @Override
     public Optional<CookieHandler> cookieHandler() {
