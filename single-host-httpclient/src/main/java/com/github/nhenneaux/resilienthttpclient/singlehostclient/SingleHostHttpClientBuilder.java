@@ -8,6 +8,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.net.InetAddress;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -97,13 +98,22 @@ public class SingleHostHttpClientBuilder {
     public HttpClient buildWithHostHeader() {
         HttpClient client = build();
         return isJava13OrHigher()
-                .map(ignored -> new HttpClientWrapper(client, hostAddress, hostname))
+                .map(ignored -> new HttpClientWrapper(client, this::requestWithHostHeader))
                 .map(HttpClient.class::cast)
                 .orElse(client);
     }
 
+    private SingleIpHttpRequest requestWithHostHeader(HttpRequest httpRequest) {
+        final int port = httpRequest.uri().getPort();
+        if (port == -1) {
+            // No port in the URI
+            return new SingleIpHttpRequest(httpRequest, hostAddress, hostname);
+        }
+        return new SingleIpHttpRequest(httpRequest, hostAddress, hostname + ":" + port);
+    }
+
     public HttpClient build() {
-        return new HttpClientWrapper(builder.build(), hostAddress);
+        return new HttpClientWrapper(builder.build(), httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress));
     }
 
 

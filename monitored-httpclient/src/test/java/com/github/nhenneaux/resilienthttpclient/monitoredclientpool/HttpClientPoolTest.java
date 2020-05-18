@@ -1,5 +1,11 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
@@ -40,11 +46,12 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -54,6 +61,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HttpClientPoolTest {
+
+    private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
+
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -66,13 +76,33 @@ class HttpClientPoolTest {
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
-                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
 
                 final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
                 final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
                 final HttpClient httpClient = singleIpHttpClient.getHttpClient();
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString())
+                        .thenApply(HttpResponse::statusCode)
+                        .join();
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
+        }
+    }
+
+    @Test
+    void resilientClient() throws MalformedURLException, URISyntaxException {
+        final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+        for (String hostname : hosts) {
+            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
+            try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
+                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+                final HttpClient httpClient = httpClientPool.resilientClient();
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
                                 .build(),
                         HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
@@ -88,11 +118,13 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClientBuilder(inetAddress ->
+                .withSingleHostHttpClient(inetAddress ->
                         SingleHostHttpClientBuilder
                                 .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching()
-                                .withSni())
+                                .withSni()
+                                .buildWithHostHeader()
+                )
                 .build()
         ) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -101,7 +133,7 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                            .uri(new URL("https", hostname, serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
                             .build(),
                     HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
@@ -116,12 +148,12 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClientBuilder(inetAddress ->
+                .withSingleHostHttpClient(inetAddress ->
                         SingleHostHttpClientBuilder
                                 .builder(hostname, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
                                 .withTlsNameMatching((KeyStore) null)
                                 .withSni()
-
+                                .build()
                 )
                 .build()) {
             await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -149,10 +181,10 @@ class HttpClientPoolTest {
                 .build()
         ) {
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), containsString("SingleIpHttpClient{inetAddress=google.com"));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ", healthy=true}, ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ", healthy="));
 
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
+                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
         }
     }
 
@@ -168,7 +200,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}", httpClientPool.toString());
 
     }
 
@@ -178,15 +210,44 @@ class HttpClientPoolTest {
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
-                await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(
-                        () -> {
-                            final HealthCheckResult checkResult = httpClientPool.check();
-                            return Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING).contains(checkResult.getStatus());
-                        }
-                );
+                await().pollDelay(1, TimeUnit.SECONDS)
+                        .atMost(1, TimeUnit.MINUTES)
+                        .until(
+                                httpClientPool::check,
+                                checkResult -> NOT_ERROR.contains(checkResult.getStatus())
+
+                        );
             }
         }
     }
+
+    @Test
+    void checkInJson() throws JsonProcessingException {
+        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.java.net");
+        try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            final HealthCheckResult result = await()
+                    .pollDelay(1, TimeUnit.SECONDS)
+                    .atMost(1, TimeUnit.MINUTES).until(
+                            httpClientPool::check,
+                            checkResult -> NOT_ERROR.contains(checkResult.getStatus())
+
+                    );
+            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"OK\",\"details\":[{\"hostname\":\"openjdk.java.net\",\"hostAddress\":\"", "\",\"healthUri\":\"", "\",\"healthy\":true}]}"));
+        }
+    }
+
+    private ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .configure(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                .configure(SerializationFeature.WRITE_DATES_WITH_ZONE_ID, false)
+                .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
+                .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    }
+
 
     @Test
     void scheduleRefresh() {
@@ -316,14 +377,10 @@ class HttpClientPoolTest {
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
         // When
-        try (HttpClientPool ignored = HttpClientPool.builder(serverConfiguration)
+        HttpClientPool.builder(serverConfiguration)
                 .withDnsLookupWrapper(dnsLookupWrapper)
                 .withScheduledExecutorService(scheduledExecutorService)
-                .build()) {
-            fail();
-        } catch (IllegalArgumentException expected) {
-            assertEquals("Cannot build health URI from ServerConfiguration{hostname='openjdk.java.net', port=443, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}", expected.getMessage());
-        }
+                .build();
         // Then
         verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
         @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(3)).getHostAddress();
@@ -681,7 +738,7 @@ class HttpClientPoolTest {
     void shouldNotStopListRefreshingInCaseOfRuntimeException() throws MalformedURLException, URISyntaxException {
         final ServerConfiguration serverConfigurationMock = mock(ServerConfiguration.class);
         final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.java.net");
-        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx",  "openjdk.java.net");
+        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx", "openjdk.java.net");
         when(serverConfigurationMock.getDnsLookupRefreshPeriodInSeconds()).thenReturn(1L);
         when(serverConfigurationMock.getConnectionHealthCheckPeriodInSeconds()).thenReturn(serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
@@ -703,4 +760,20 @@ class HttpClientPoolTest {
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
     }
+
+    @Test
+    void readme() {
+        HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
+                new ServerConfiguration("openjdk.java.net"));
+        HttpClient resilientClient = singleInstanceByHost.resilientClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://openjdk.java.net/"))
+                .build();
+        final String response = resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        assertNotNull(response);
+    }
+
 }

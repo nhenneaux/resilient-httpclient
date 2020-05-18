@@ -45,11 +45,9 @@ public class SingleIpHttpClient implements AutoCloseable {
             ServerConfiguration serverConfiguration,
             ScheduledExecutorService scheduledExecutorService
     ) {
-        Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        this.healthUri = healthUri(inetAddress, serverConfiguration);
-
+        this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
 
@@ -74,20 +72,19 @@ public class SingleIpHttpClient implements AutoCloseable {
             InetAddress inetAddress,
             ServerConfiguration serverConfiguration
     ) {
-        Objects.requireNonNull(serverConfiguration);
         this.httpClient = Objects.requireNonNull(httpClient);
         this.inetAddress = Objects.requireNonNull(inetAddress);
-        this.healthUri = healthUri(inetAddress, serverConfiguration);
-
+        this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
+
         this.scheduledFuture = CompletableFuture.completedFuture(null);
         checkHealthStatus();
     }
 
-    private URI healthUri(InetAddress inetAddress, ServerConfiguration serverConfiguration) {
+    private URI healthUri(ServerConfiguration serverConfiguration) {
         try {
-            return new URL("https", inetAddress.getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+            return new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
         } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalArgumentException("Cannot build health URI from " + serverConfiguration, e);
         }
@@ -97,7 +94,7 @@ public class SingleIpHttpClient implements AutoCloseable {
      * If called and the previous health status was unhealthy, then a new health check is performed.
      */
     public boolean isHealthy() {
-        if(!healthy.get()) {
+        if (!healthy.get()) {
             checkHealthStatus();
         }
         return healthy.get();
@@ -122,7 +119,7 @@ public class SingleIpHttpClient implements AutoCloseable {
             LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
             healthy.set(statusCode >= 200 && statusCode <= 499);
         } catch (RuntimeException e) {
-            LOGGER.log(Level.WARNING, "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start), e);
+            LOGGER.log(Level.WARNING, e, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start));
             healthy.set(false);
         }
     }
@@ -131,8 +128,20 @@ public class SingleIpHttpClient implements AutoCloseable {
         return " in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms.";
     }
 
-    public InetAddress getInetAddress() {
+    InetAddress getInetAddress() {
         return inetAddress;
+    }
+
+    AtomicBoolean getHealthy() {
+        return healthy;
+    }
+
+    URI getHealthUri() {
+        return healthUri;
+    }
+
+    String getHostname() {
+        return serverConfiguration.getHostname();
     }
 
     public HttpClient getHttpClient() {
@@ -143,6 +152,8 @@ public class SingleIpHttpClient implements AutoCloseable {
     public String toString() {
         return "SingleIpHttpClient{" +
                 "inetAddress=" + inetAddress +
+                ", healthy=" + healthy +
+                ", hostname=" + serverConfiguration.getHostname() +
                 ", healthUri=" + healthUri +
                 '}';
     }

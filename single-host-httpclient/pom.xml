@@ -4,30 +4,10 @@
     <parent>
         <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
         <artifactId>resilient-httpclient</artifactId>
-        <version>0.4.5</version>
+        <version>0.5.1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>single-host-httpclient</artifactId>
-    <dependencies>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.5.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
-            <version>2.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>3.2.4</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 
 </project>
