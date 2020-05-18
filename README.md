@@ -1,4 +1,4 @@
-# Resilient Java HTTP client based on `java.net.http.HttpClient`
+# Resilient HTTP client based on `java.net.http.HttpClient`
 Resilient Java HTTP client based on `java.net.http.HttpClient`. A pool of HTTP client targeting a single IP each is refreshed based on health check and DNS query.
 * Client side load balancing between all the IP behind the hostname
 * Monitoring of all the IP behind the hostname at HTTP level
