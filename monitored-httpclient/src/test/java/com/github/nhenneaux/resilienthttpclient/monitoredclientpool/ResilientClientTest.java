@@ -118,7 +118,8 @@ class ResilientClientTest {
         final ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
         when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
         when(serverConfiguration.getPort()).thenReturn(-1);
-        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(null)));
+        ServerConfiguration serverConfiguration1 = new ServerConfiguration(null);
+        final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, serverConfiguration1));
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
 
@@ -226,7 +227,9 @@ class ResilientClientTest {
         final Error expected = new Error();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
+        RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()));
+        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, roundRobinPool);
+        final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause());
     }
@@ -244,7 +247,8 @@ class ResilientClientTest {
         final RuntimeException expected = new RuntimeException();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
+        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock())));
+        final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause());
     }
@@ -256,7 +260,8 @@ class ResilientClientTest {
         final Exception expected = new Exception();
         completableFuture.completeExceptionally(expected);
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()))).join());
+        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock())));
+        final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause().getCause());
     }
