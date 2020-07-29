@@ -1,5 +1,8 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -77,18 +80,30 @@ public class SingleHostHttpClientBuilder {
         return withTlsNameMatching((KeyStore) null);
     }
 
+    private static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore, ManagerFactoryParameters clientCertificate, SSLContext initialSslContext) {
+        final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
+        final KeyManager[] keyManagers = Optional.ofNullable(clientCertificate)
+                .map(SingleHostHttpClientBuilder::buildKeyManagerFactory)
+                .map(KeyManagerFactory::getKeyManagers)
+                .orElse(null);
+
+        handleGeneralSecurityException(() -> initialSslContext.init(keyManagers, trustOnlyGivenHostname, new SecureRandom()));
+        return initialSslContext;
+    }
+
+    private static KeyManagerFactory buildKeyManagerFactory(ManagerFactoryParameters managerFactoryParameters) {
+        KeyManagerFactory keyManagerFactory = handleGeneralSecurityException(() -> KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
+        handleGeneralSecurityException(() -> keyManagerFactory.init(managerFactoryParameters));
+        return keyManagerFactory;
+    }
+
     public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore) {
-        return withTlsNameMatching(trustStore, handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3")));
+        return withTlsNameMatching(trustStore, null, handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3")));
+
     }
 
-    public SingleHostHttpClientBuilder withTlsNameMatching(SSLContext initialSslContext) {
-        return withTlsNameMatching(null, initialSslContext);
-    }
-
-    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, SSLContext initialSslContext) {
-        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, initialSslContext);
-        builder.sslContext(sslContextForSingleHostname);
-        return this;
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, ManagerFactoryParameters clientCertificate) {
+        return withTlsNameMatching(trustStore, clientCertificate, handleGeneralSecurityException(() -> SSLContext.getInstance("TLSv1.3")));
     }
 
 
@@ -116,12 +131,14 @@ public class SingleHostHttpClientBuilder {
         return new HttpClientWrapper(builder.build(), httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress));
     }
 
+    public SingleHostHttpClientBuilder withTlsNameMatching(SSLContext initialSslContext) {
+        return withTlsNameMatching(null, null, initialSslContext);
+    }
 
-    private static SSLContext buildSslContextForSingleHostname(String hostname, KeyStore truststore, SSLContext initialSslContext) {
-        final TrustManager[] trustOnlyGivenHostname = singleHostTrustManager(hostname, truststore);
-
-        handleGeneralSecurityException(() -> initialSslContext.init(null, trustOnlyGivenHostname, new SecureRandom()));
-        return initialSslContext;
+    public SingleHostHttpClientBuilder withTlsNameMatching(KeyStore trustStore, ManagerFactoryParameters clientCertificate, SSLContext initialSslContext) {
+        final SSLContext sslContextForSingleHostname = buildSslContextForSingleHostname(hostname, trustStore, clientCertificate, initialSslContext);
+        builder.sslContext(sslContextForSingleHostname);
+        return this;
     }
 
     private static Optional<Runtime.Version> isJava13OrHigher() {

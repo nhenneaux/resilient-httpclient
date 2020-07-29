@@ -32,6 +32,12 @@ import static org.mockito.Mockito.when;
 
 class ResilientClientTest {
 
+    static {
+        // Force properties to use single ip HTTP client
+        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");
+    }
+
     @Test
     void send() throws IOException, InterruptedException {
         // Given
