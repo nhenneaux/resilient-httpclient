@@ -261,11 +261,10 @@ class SingleHostHttpClientBuilderTest {
                 .uri(URI.create("https://" + ip))
                 .build();
 
+        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
 
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join());
+        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -283,11 +282,10 @@ class SingleHostHttpClientBuilderTest {
                 .uri(URI.create("https://" + ip))
                 .build();
 
+        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
 
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join());
+        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -305,11 +303,10 @@ class SingleHostHttpClientBuilderTest {
                 .uri(URI.create("https://" + ip))
                 .build();
 
+        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
 
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join());
+        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
@@ -326,12 +323,10 @@ class SingleHostHttpClientBuilderTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://" + ip))
                 .build();
-
+        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
 
         // When
-        final CompletionException completionException = assertThrows(CompletionException.class, () -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .join());
+        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
         // Then
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
