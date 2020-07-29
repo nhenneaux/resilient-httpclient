@@ -153,6 +153,73 @@ class SingleHostHttpClientBuilderTest {
 
         // Then
         assertNotNull(response);
+
+    }
+
+    @Test
+    void shouldBuildSingleIpHttpClientWithMutualTls() throws Exception {
+        // Given
+        final var hostname = "client.badssl.com";
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        KeyStore trustStore = KeyStore.getInstance("PKCS12");
+        trustStore.load(getClass().getResourceAsStream("/truststore.p12"), "p12-pass".toCharArray());
+
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        char[] password = "badssl.com".toCharArray();
+        keyStore.load(getClass().getResourceAsStream("/badssl.com-client.p12"), password);
+
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                .withTlsNameMatching(trustStore, keyStore, password)
+                .withSni()
+                .buildWithHostHeader();
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + hostname))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+    }
+
+    @Test
+    void shouldBuildSingleIpHttpClientWithMutualTlsCertMissing() throws Exception {
+        // Given
+        final var hostname = "client-cert-missing.badssl.com";
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        KeyStore trustStore = KeyStore.getInstance("PKCS12");
+        trustStore.load(getClass().getResourceAsStream("/truststore.p12"), "p12-pass".toCharArray());
+
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        char[] password = "badssl.com".toCharArray();
+        keyStore.load(getClass().getResourceAsStream("/badssl.com-client.p12"), password);
+
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+                .withTlsNameMatching(trustStore, keyStore, password)
+                .withSni()
+                .buildWithHostHeader();
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + hostname))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
     }
 
     @Test
