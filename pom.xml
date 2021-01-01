@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>0.6.0</version>
+    <version>0.6.1</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
@@ -17,6 +17,10 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
+        <sonar.projectKey>nhenneaux_resilient-httpclient</sonar.projectKey>
+        <sonar.organization>nhenneaux</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+
         <skipRelease>true</skipRelease>
     </properties>
     <modules>
@@ -27,7 +31,19 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.6.2</version>
+            <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>3.6.28</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -36,25 +52,13 @@
             <version>2.2</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>4.0.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>3.3.3</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.5</version>
+                <version>0.8.6</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -198,8 +202,8 @@
 
     <licenses>
         <license>
-            <name>GNU General Public License (GPL)</name>
-            <url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+            <name>GNU LGPL 3</name>
+            <url>http://www.gnu.org/licenses/lgpl.txt</url>
             <distribution>repo</distribution>
         </license>
     </licenses>

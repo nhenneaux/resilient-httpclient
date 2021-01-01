@@ -22,7 +22,8 @@ resilientClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
         .thenAccept(System.out::println)
         .join();
 ```
-[![Build Status](https://travis-ci.com/nhenneaux/resilient-httpclient.svg?branch=master)](https://travis-ci.com/nhenneaux/resilient-httpclient)
+
+[![Build Status](https://github.com/nhenneaux/resilient-httpclient/workflows/Java%20CI/badge.svg)](https://github.com/nhenneaux/resilient-httpclient/actions?query=workflow%3A%22Java+CI%22)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.nhenneaux.resilienthttpclient/monitored-httpclient/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.nhenneaux.resilienthttpclient/monitored-httpclient)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=nhenneaux_resilient-httpclient&metric=alert_status)](https://sonarcloud.io/dashboard?id=nhenneaux_resilient-httpclient)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=nhenneaux_resilient-httpclient&metric=coverage)](https://sonarcloud.io/dashboard?id=nhenneaux_resilient-httpclient)
