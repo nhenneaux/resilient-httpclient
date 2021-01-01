@@ -181,10 +181,12 @@ class HttpClientPoolTest {
                 .build()
         ) {
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ", healthy=true}, ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ", healthy="));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='google.com', hostAddress=", ", healthUri=https://", ", healthy=true}"));
 
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"), containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["), containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
+                    allOf(containsString("SingleIpHttpClient{inetAddress=google.com"),
+                            containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
+                            containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
         }
     }
 
