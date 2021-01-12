@@ -228,6 +228,9 @@
         <developer>
             <name>Nicolas Henneaux</name>
             <email>nicolas.henneaux@gmail.com</email>
+            <roles>
+                <role>Lead maintainer</role>
+            </roles>
         </developer>
         <developer>
             <name>Andrey Lebedev</name>
