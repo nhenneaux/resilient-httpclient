@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>0.6.2</version>
+    <version>0.6.3</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
@@ -124,6 +124,7 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
+                            <keyname>46E20128E3A624C11FFF6B95D1BA17265A0E8512</keyname>
                             <!-- Configuration to prevent the 'Signing Prompt' or the  -->
                             <!-- 'gpg: signing failed: No such file or directory' error -->
                             <!-- See https://myshittycode.com/2017/08/07/maven-gpg-plugin-prevent-signing-prompt-or-gpg-signing-failed-no-such-file-or-directory-error/ -->
@@ -145,8 +146,15 @@
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <!-- Set this to true and the release will automatically proceed and -->
                     <!-- sync to Central Repository will follow -->
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.thoughtworks.xstream</groupId>
+                        <artifactId>xstream</artifactId>
+                        <version>1.4.15</version> <!-- apparently this needs to be exactly this version -->
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
 
