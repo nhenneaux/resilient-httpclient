@@ -5,7 +5,7 @@
     <parent>
         <artifactId>resilient-httpclient</artifactId>
         <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
-        <version>0.6.3</version>
+        <version>0.6.4</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.13.0</version>
+            <version>2.13.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
