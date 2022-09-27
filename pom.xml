@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>0.6.4</version>
+    <version>0.6.5</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
@@ -30,19 +30,19 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.8.2</version>
+            <version>5.9.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.1.1</version>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>4.1.0</version>
+            <version>4.8.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -57,7 +57,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version>
+                <version>0.8.8</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -76,7 +76,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>3.8.2</version>
+                <version>3.12.1</version>
                 <configuration>
                     <skip>${skipRelease}</skip>
                     <locales>en</locales>
@@ -112,7 +112,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.6</version>
+                <version>3.0.1</version>
                 <configuration>
                     <skip>${skipRelease}</skip>
                 </configuration>
@@ -124,7 +124,7 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
-                            <keyname>46E20128E3A624C11FFF6B95D1BA17265A0E8512</keyname>
+                            <keyname>24CB0C2DAB84FC5C84BC0631A41ACFF32C0A49B9</keyname>
                             <!-- Configuration to prevent the 'Signing Prompt' or the  -->
                             <!-- 'gpg: signing failed: No such file or directory' error -->
                             <!-- See https://myshittycode.com/2017/08/07/maven-gpg-plugin-prevent-signing-prompt-or-gpg-signing-failed-no-such-file-or-directory-error/ -->
@@ -139,7 +139,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
+                <version>1.6.13</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
@@ -148,40 +148,32 @@
                     <!-- sync to Central Repository will follow -->
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.thoughtworks.xstream</groupId>
-                        <artifactId>xstream</artifactId>
-                        <version>1.4.15</version> <!-- apparently this needs to be exactly this version -->
-                    </dependency>
-                </dependencies>
             </plugin>
         </plugins>
 
         <pluginManagement>
             <plugins>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.1</version>
+                    <version>3.10.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-source-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>3.2.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.1.1</version>
+                    <version>3.4.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.8.2</version>
+                    <version>3.0.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>3.3.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
