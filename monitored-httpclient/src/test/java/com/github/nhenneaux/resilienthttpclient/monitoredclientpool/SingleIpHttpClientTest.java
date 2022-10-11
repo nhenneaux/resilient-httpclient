@@ -30,7 +30,7 @@ class SingleIpHttpClientTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.newHttpClient("test", mock(InetAddress.class));
+        SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
     }
 
     @Test
