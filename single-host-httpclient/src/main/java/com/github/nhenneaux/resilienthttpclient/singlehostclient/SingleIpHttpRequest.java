@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -56,10 +57,15 @@ class SingleIpHttpRequest extends HttpRequest {
     @Override
     public URI uri() {
         final URI uri = httpRequest.uri();
+        final var address = hostAddress.getHostAddress();
+        return newUriWithAddress(uri, address);
+    }
+
+    static URI newUriWithAddress(URI uri, String address) {
         try {
-            return new URI(uri.getScheme(), uri.getUserInfo(), hostAddress.getHostAddress(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
-        } catch (Exception e) {
-            throw new IllegalStateException("Cannot build uri " + uri + "with address " + hostAddress, e);
+            return new URI(uri.getScheme(), uri.getUserInfo(), address, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Cannot build uri " + uri + "with address " + address, e);
         }
     }
 
