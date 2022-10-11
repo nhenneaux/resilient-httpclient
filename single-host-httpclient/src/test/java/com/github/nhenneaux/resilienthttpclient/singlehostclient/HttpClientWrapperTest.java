@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -13,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 class HttpClientWrapperTest {
     static {
@@ -25,9 +25,9 @@ class HttpClientWrapperTest {
     @Test
     void send() throws IOException, InterruptedException {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+
         final String hostname = UUID.randomUUID().toString();
+        final InetAddress hostAddress = InetAddress.getByAddress(hostname, new byte[]{10, 1, 1, 1});
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, hostname));
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientWrapperTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
@@ -37,11 +37,10 @@ class HttpClientWrapperTest {
     }
 
     @Test
-    void sendAsync() {
+    void sendAsync() throws UnknownHostException {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
         final String hostname = UUID.randomUUID().toString();
+        final InetAddress hostAddress = InetAddress.getByAddress(hostname, new byte[]{10, 1, 1, 1});
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, hostname));
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientWrapperTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
@@ -50,11 +49,13 @@ class HttpClientWrapperTest {
     }
 
     @Test
-    void testSendAsync() {
+    void testSendAsync() throws UnknownHostException {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+
         final String hostname = UUID.randomUUID().toString();
+
+        final InetAddress hostAddress = InetAddress.getByAddress(hostname, new byte[]{10, 1, 1, 1});
+
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, hostname));
         final HttpRequest httpRequest = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpClientWrapperTest.junit")).build();
         final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
@@ -67,7 +68,7 @@ class HttpClientWrapperTest {
     @Test
     void cookieHandler() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.cookieHandler();
         verify(httpClient).cookieHandler();
@@ -76,7 +77,7 @@ class HttpClientWrapperTest {
     @Test
     void connectTimeout() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.connectTimeout();
         verify(httpClient).connectTimeout();
@@ -85,16 +86,20 @@ class HttpClientWrapperTest {
     @Test
     void followRedirects() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.followRedirects();
         verify(httpClient).followRedirects();
     }
 
+    private static InetAddress getAddress() {
+        return InetAddress.getLoopbackAddress();
+    }
+
     @Test
     void proxy() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.proxy();
         verify(httpClient).proxy();
@@ -103,7 +108,7 @@ class HttpClientWrapperTest {
     @Test
     void sslContext() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.sslContext();
         verify(httpClient).sslContext();
@@ -112,7 +117,7 @@ class HttpClientWrapperTest {
     @Test
     void sslParameters() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.sslParameters();
         verify(httpClient).sslParameters();
@@ -121,7 +126,7 @@ class HttpClientWrapperTest {
     @Test
     void authenticator() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.authenticator();
         verify(httpClient).authenticator();
@@ -130,7 +135,7 @@ class HttpClientWrapperTest {
     @Test
     void version() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.version();
         verify(httpClient).version();
@@ -139,7 +144,7 @@ class HttpClientWrapperTest {
     @Test
     void executor() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.executor();
         verify(httpClient).executor();
@@ -149,7 +154,7 @@ class HttpClientWrapperTest {
     @Test
     void newWebSocketBuilder() {
         final HttpClient httpClient = mock(HttpClient.class);
-        final InetAddress hostAddress = mock(InetAddress.class);
+        final InetAddress hostAddress = getAddress();
         final HttpClientWrapper httpClientWrapper = new HttpClientWrapper(httpClient, httpRequest -> new SingleIpHttpRequest(httpRequest, hostAddress, UUID.randomUUID().toString()));
         httpClientWrapper.newWebSocketBuilder();
         verify(httpClient).newWebSocketBuilder();

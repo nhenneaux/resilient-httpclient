@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
@@ -44,8 +45,7 @@ class ResilientClientTest {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
 
-        InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+        InetAddress hostAddress = getInetAddress();
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(UUID.randomUUID().toString())));
 
@@ -67,14 +67,21 @@ class ResilientClientTest {
 
     }
 
+    private static InetAddress getInetAddress() {
+        try {
+            return InetAddress.getByAddress(new byte[]{10,1,1,1});
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     void sendAsync() throws ExecutionException, InterruptedException {
         // Given
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final String hostname = UUID.randomUUID().toString();
-        InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+        InetAddress hostAddress = getInetAddress();
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
         doNothing().when(ipHttpClient).checkHealthStatus();
@@ -102,7 +109,7 @@ class ResilientClientTest {
     void throwForInvalidUrl() {
         final HttpClient httpClient = mock(HttpClient.class);
         final String hostname = UUID.randomUUID().toString();
-        InetAddress hostAddress = mock(InetAddress.class);
+        InetAddress hostAddress = InetAddress.getLoopbackAddress();
         final ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
         when(serverConfiguration.getHostname()).thenReturn(hostname);
         when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
@@ -114,7 +121,7 @@ class ResilientClientTest {
     @Test
     void throwForInvalidUrlSyntax() {
         final HttpClient httpClient = mock(HttpClient.class);
-        InetAddress hostAddress = mock(InetAddress.class);
+        InetAddress hostAddress = InetAddress.getLoopbackAddress();
         final ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
         when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
         when(serverConfiguration.getPort()).thenReturn(-1);
@@ -129,8 +136,7 @@ class ResilientClientTest {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
         final String hostname = UUID.randomUUID().toString();
-        InetAddress hostAddress = mock(InetAddress.class);
-        when(hostAddress.getHostAddress()).thenReturn("10.1.1.1");
+        InetAddress hostAddress = getInetAddress();
 
         final SingleIpHttpClient ipHttpClient = spy(new SingleIpHttpClient(httpClient, hostAddress, new ServerConfiguration(hostname)));
         doNothing().when(ipHttpClient).checkHealthStatus();
@@ -169,9 +175,11 @@ class ResilientClientTest {
     }
 
     private InetAddress inetAddress() {
-        final InetAddress inetAddress = mock(InetAddress.class);
-        when(inetAddress.getHostAddress()).thenReturn("10.255.1.1");
-        return inetAddress;
+        try {
+            return InetAddress.getByAddress(new byte[]{10,127,1,1});
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test

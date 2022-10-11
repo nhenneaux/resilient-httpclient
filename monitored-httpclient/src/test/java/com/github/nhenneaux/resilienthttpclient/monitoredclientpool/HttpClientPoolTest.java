@@ -348,8 +348,7 @@ class HttpClientPoolTest {
         });
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress secondAddress = mock(InetAddress.class);
-        when(secondAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress secondAddress = getInetAddress();
         final InetAddress firstAddress = InetAddress.getByName(hostname);
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
@@ -366,6 +365,10 @@ class HttpClientPoolTest {
         verify(scheduledDnsRefreshFuture).cancel(true);
     }
 
+    private static InetAddress getInetAddress() throws UnknownHostException {
+        return InetAddress.getByAddress(new byte[]{10,0,0,127});
+    }
+
     @Test
     void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
         // Given
@@ -374,7 +377,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress secondAddress = mock(InetAddress.class);
+        final InetAddress secondAddress = InetAddress.getLoopbackAddress();
         final InetAddress firstAddress = InetAddress.getByName(hostname);
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
@@ -385,7 +388,7 @@ class HttpClientPoolTest {
                 .build();
         // Then
         verify(dnsLookupWrapper, times(2)).getInetAddressesByDnsLookUp(serverConfiguration.getHostname());
-        @SuppressWarnings("unused") final String hostAddress = verify(secondAddress, times(3)).getHostAddress();
+
     }
 
     @Test
@@ -414,8 +417,7 @@ class HttpClientPoolTest {
         });
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress secondAddress = mock(InetAddress.class);
-        when(secondAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress secondAddress = getInetAddress();
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
@@ -450,8 +452,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress firstAddress = getInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
@@ -484,8 +485,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress firstAddress = getInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
@@ -685,8 +685,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = mock(InetAddress.class);
-        when(firstAddress.getHostAddress()).thenReturn("10.0.0.255");
+        final InetAddress firstAddress = getInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
