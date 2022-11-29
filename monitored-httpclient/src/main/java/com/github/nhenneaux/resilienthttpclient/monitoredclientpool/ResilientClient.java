@@ -22,11 +22,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
+
+import static java.lang.System.Logger.Level;
 
 class ResilientClient extends HttpClient {
 
-    private static final Logger LOGGER = Logger.getLogger(ResilientClient.class.getName());
+    private static final Logger LOGGER = System.getLogger(ResilientClient.class.getName());
     private static final Set<Class<?>> CONNECT_EXCEPTION_CLASS = Set.of(HttpConnectTimeoutException.class, ConnectException.class);
     private final Supplier<RoundRobinPool> roundRobinPoolSupplier;
 
@@ -148,7 +150,7 @@ class ResilientClient extends HttpClient {
                 return client.getHttpClient().send(request, responseBodyHandler);
             } catch (HttpConnectTimeoutException | ConnectException e) {
                 var finalClient = client;
-                LOGGER.warning(() -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
+                LOGGER.log(Level.WARNING, () -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
                 tried.add(finalClient.getInetAddress());
                 final Optional<SingleIpHttpClient> nextClient = roundRobinPool.next();
                 if (nextClient.isEmpty()) {
