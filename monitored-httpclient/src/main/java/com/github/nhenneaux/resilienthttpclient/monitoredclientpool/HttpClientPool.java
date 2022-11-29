@@ -14,10 +14,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
 import java.util.stream.Collectors;
 
+import static java.lang.System.Logger.Level;
+import static java.lang.System.getLogger;
 import static java.util.function.Predicate.not;
 
 /**
@@ -27,7 +28,7 @@ import static java.util.function.Predicate.not;
  */
 public class HttpClientPool implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(HttpClientPool.class.getSimpleName());
+    private static final Logger LOGGER = getLogger(HttpClientPool.class.getSimpleName());
 
     private final AtomicReference<RoundRobinPool> httpClientsCache;
 
@@ -83,7 +84,7 @@ public class HttpClientPool implements AutoCloseable {
         if (propertyValue != null && !propertyValue.isEmpty()
                 && ("-1".equals(propertyValue) || Integer.parseInt(propertyValue) > minimumPropertyValueExpected)
         ) {
-            LOGGER.log(Level.SEVERE, () -> "The JVM Security property '" + propertyName + "' is set to '" + propertyValue + "' while a value greater than '" + minimumPropertyValueExpected + "' is expected.");
+            LOGGER.log(Level.ERROR, () -> "The JVM Security property '" + propertyName + "' is set to '" + propertyValue + "' while a value greater than '" + minimumPropertyValueExpected + "' is expected.");
             return false;
         }
         return true;
@@ -102,7 +103,7 @@ public class HttpClientPool implements AutoCloseable {
             //  IllegalArgumentException means a misconfiguration and has to be re-thrown immediately
             throw e;
         } catch (RuntimeException e) {
-            LOGGER.log(Level.SEVERE, e, () -> "Error while refreshing list of IP clients: " + e.getMessage());
+            LOGGER.log(Level.ERROR, () -> "Error while refreshing list of IP clients: " + e.getMessage(), e);
         }
     }
 
@@ -122,7 +123,7 @@ public class HttpClientPool implements AutoCloseable {
         final Set<InetAddress> updatedLookup = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
         if (updatedLookup.isEmpty()) {
             if (oldListOfClients.isEmpty()) {
-                LOGGER.log(Level.SEVERE, "The DNS lookup has returned an empty list of IPs. There is no client in the pool.");
+                LOGGER.log(Level.ERROR, "The DNS lookup has returned an empty list of IPs. There is no client in the pool.");
             } else {
                 LOGGER.log(Level.WARNING, "The DNS lookup has returned an empty list of IPs. Reusing the old list.");
             }
@@ -213,7 +214,7 @@ public class HttpClientPool implements AutoCloseable {
      */
     public HealthCheckResult check() {
         final List<SingleIpHttpClient> clients = client().getList();
-        LOGGER.log(Level.FINE, () -> "Check HTTP clients pool for health connection(s): " + clients);
+        LOGGER.log(Level.DEBUG, () -> "Check HTTP clients pool for health connection(s): " + clients);
         final boolean allConnectionsAvailable = clients.stream().allMatch(SingleIpHttpClient::isHealthy);
         final boolean allConnectionsUnavailable = clients.stream().noneMatch(SingleIpHttpClient::isHealthy);
 
@@ -226,7 +227,7 @@ public class HttpClientPool implements AutoCloseable {
         } else {
             status = HealthCheckResult.HealthStatus.WARNING;
         }
-        LOGGER.log(Level.FINE, () -> "HTTP clients pool health is " + status);
+        LOGGER.log(Level.DEBUG, () -> "HTTP clients pool health is " + status);
 
 
         return new HealthCheckResult(status, clients.stream().map(client -> new ConnectionDetail(client.getHostname(), client.getInetAddress().getHostAddress(), client.getHealthUri(), client.getHealthy().get())).collect(Collectors.toUnmodifiableList()));

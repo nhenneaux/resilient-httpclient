@@ -11,14 +11,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
 import java.util.stream.Stream;
 
+import static java.lang.System.Logger.Level;
 import static java.util.stream.Collectors.joining;
 
 public class SingleHostnameX509TrustManager implements X509TrustManager {
-    private static final Logger LOGGER = Logger.getLogger(SingleHostnameX509TrustManager.class.getSimpleName());
+    private static final Logger LOGGER = System.getLogger(SingleHostnameX509TrustManager.class.getSimpleName());
     // constants for subject alt names of type DNS and IP
     private static final int ALTNAME_DNS = 2;
 
@@ -90,7 +90,7 @@ public class SingleHostnameX509TrustManager implements X509TrustManager {
                     try {
                         ldapName = new LdapName(name);
                     } catch (InvalidNameException e) {
-                        LOGGER.log(Level.INFO, e, () -> "The name " + name + " is not valid and cannot be parsed as javax.naming.ldap.LdapName");
+                        LOGGER.log(Level.INFO, () -> "The name " + name + " is not valid and cannot be parsed as javax.naming.ldap.LdapName", e);
                         return Stream.empty();
                     }
                     return ldapName.getRdns().stream()
@@ -119,7 +119,7 @@ public class SingleHostnameX509TrustManager implements X509TrustManager {
             name = IDN.toUnicode(IDN.toASCII(name));
             template = IDN.toUnicode(IDN.toASCII(template));
         } catch (RuntimeException re) {
-            LOGGER.log(Level.FINE, "Failed to normalize to Unicode.", re);
+            LOGGER.log(Level.DEBUG, "Failed to normalize to Unicode.", re);
             return false;
         }
 

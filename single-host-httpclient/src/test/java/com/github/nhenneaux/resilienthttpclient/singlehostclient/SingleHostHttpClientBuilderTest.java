@@ -360,7 +360,7 @@ class SingleHostHttpClientBuilderTest {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertThat(executionException.getMessage(), Matchers.anyOf(Matchers.equalTo("java.net.http.HttpConnectTimeoutException: HTTP connect timed out"), Matchers.equalTo("java.net.ConnectException: Connection refused")));
+        assertThat(executionException.getMessage(), Matchers.anyOf(Matchers.equalTo("java.net.http.HttpConnectTimeoutException: HTTP connect timed out"), Matchers.equalTo("java.net.ConnectException: Connection refused"), Matchers.equalTo("java.net.ConnectException: No route to host")));
     }
 
     @Test

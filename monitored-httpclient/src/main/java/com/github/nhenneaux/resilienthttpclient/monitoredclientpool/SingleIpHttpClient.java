@@ -17,12 +17,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
+
+import static java.lang.System.Logger.Level;
 
 public class SingleIpHttpClient implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(SingleIpHttpClient.class.getSimpleName());
+    private static final Logger LOGGER = System.getLogger(SingleIpHttpClient.class.getSimpleName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
@@ -117,7 +118,7 @@ public class SingleIpHttpClient implements AutoCloseable {
             LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
             healthy.set(statusCode >= 200 && statusCode <= 499);
         } catch (RuntimeException e) {
-            LOGGER.log(Level.WARNING, e, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start));
+            LOGGER.log(Level.WARNING, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start), e);
             healthy.set(false);
         }
     }
