@@ -17,6 +17,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(300L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
         Assertions.assertEquals(-1, serverConfiguration.getPort());
         Assertions.assertEquals(-1, serverConfiguration.getReadTimeoutInMilliseconds());
+        Assertions.assertEquals(-1, serverConfiguration.getFailureResponseCountThreshold());
     }
 
     @Test
@@ -31,6 +32,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(300L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
         Assertions.assertEquals(1234, serverConfiguration.getPort());
         Assertions.assertEquals(-1, serverConfiguration.getReadTimeoutInMilliseconds());
+        Assertions.assertEquals(-1, serverConfiguration.getFailureResponseCountThreshold());
     }
 
     @Test
