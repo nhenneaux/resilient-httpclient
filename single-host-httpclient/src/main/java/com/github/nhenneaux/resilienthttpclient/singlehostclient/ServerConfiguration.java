@@ -9,6 +9,7 @@ public class ServerConfiguration {
     private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
     private static final long DEFAULT_READ_TIMEOUT_IN_MILLISECONDS = -1; // It means there is no read timeout
+    private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
 
     private final String hostname;
     private final int port;
@@ -16,6 +17,7 @@ public class ServerConfiguration {
     private final long connectionHealthCheckPeriodInSeconds;
     private final long dnsLookupRefreshPeriodInSeconds;
     private final long readTimeoutInMilliseconds;
+    private final int failureResponseCountThreshold;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -24,7 +26,8 @@ public class ServerConfiguration {
                 DEFAULT_HEALTH_PATH,
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
-                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS
+                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS,
+                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD
         );
     }
 
@@ -36,7 +39,8 @@ public class ServerConfiguration {
                 DEFAULT_HEALTH_PATH,
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
-                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS);
+                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS,
+                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD);
     }
 
     public ServerConfiguration(
@@ -45,7 +49,8 @@ public class ServerConfiguration {
             String healthPath,
             long dnsLookupRefreshPeriodInSeconds,
             long connectionHealthCheckPeriodInSeconds,
-            long readTimeoutInMilliseconds
+            long readTimeoutInMilliseconds,
+            int failureResponseCountThreshold
     ) {
         this.hostname = hostname;
         this.port = port;
@@ -53,6 +58,7 @@ public class ServerConfiguration {
         this.connectionHealthCheckPeriodInSeconds = connectionHealthCheckPeriodInSeconds;
         this.dnsLookupRefreshPeriodInSeconds = dnsLookupRefreshPeriodInSeconds;
         this.readTimeoutInMilliseconds = readTimeoutInMilliseconds;
+        this.failureResponseCountThreshold = failureResponseCountThreshold;
     }
 
     /**
@@ -97,6 +103,15 @@ public class ServerConfiguration {
         return readTimeoutInMilliseconds;
     }
 
+    /**
+     * Threshold to create new client instead of using existing one.
+     * Calculated as total request count - success response count.
+     * A value of "-1" {i.e. default} indicates no validation by failure count.
+     */
+    public int getFailureResponseCountThreshold() {
+        return failureResponseCountThreshold;
+    }
+
     @Override
     public String toString() {
         return "ServerConfiguration{" +
@@ -106,6 +121,7 @@ public class ServerConfiguration {
                 ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
                 ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
                 ", readTimeoutInMilliseconds=" + readTimeoutInMilliseconds +
+                ", failureResponseCountThreshold= " + failureResponseCountThreshold +
                 '}';
     }
 }
