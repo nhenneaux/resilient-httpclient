@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 
+import java.lang.System.Logger;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -17,7 +18,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.lang.System.Logger;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.System.Logger.Level;
 
@@ -31,6 +32,7 @@ public class SingleIpHttpClient implements AutoCloseable {
     private final AtomicBoolean healthy;
     private final Future<?> scheduledFuture;
     private final ServerConfiguration serverConfiguration;
+    private final AtomicInteger failedResponseCount;
 
     /**
      * Create a new instance of the client and schedule a task to refresh is healthiness.
@@ -51,6 +53,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
+        this.failedResponseCount = new AtomicInteger(0);
 
         final long connectionHealthCheckPeriodInSeconds = serverConfiguration.getConnectionHealthCheckPeriodInSeconds();
         this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
@@ -78,6 +81,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         this.healthUri = healthUri(Objects.requireNonNull(serverConfiguration));
         this.serverConfiguration = serverConfiguration;
         this.healthy = new AtomicBoolean();
+        this.failedResponseCount = new AtomicInteger(0);
 
         this.scheduledFuture = CompletableFuture.completedFuture(null);
         checkHealthStatus();
@@ -116,15 +120,41 @@ public class SingleIpHttpClient implements AutoCloseable {
                     .join();
 
             LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
-            healthy.set(statusCode >= 200 && statusCode <= 499);
+
+            healthy.set(isSuccessCode(statusCode));
+            refreshFailureCountWithStatusCode(statusCode);
         } catch (RuntimeException e) {
             LOGGER.log(Level.WARNING, () -> "Failed to check health for address " + healthUri + ", error is `" + e + "`" + timingLogStatement(start), e);
             healthy.set(false);
+            incrementFailureCount();
         }
+    }
+
+    /**
+     * Validates if the client is within failed response count threshold.
+     */
+    boolean shouldBeRefreshed() {
+        final int failureResponseCountThreshold = serverConfiguration.getFailureResponseCountThreshold();
+
+        return failureResponseCountThreshold != -1 && failedResponseCount.get() >= failureResponseCountThreshold;
+    }
+
+    void refreshFailureCountWithStatusCode(final int statusCode) {
+        if (!isSuccessCode(statusCode)) {
+            incrementFailureCount();
+        }
+    }
+
+    void incrementFailureCount() {
+        failedResponseCount.incrementAndGet();
     }
 
     private String timingLogStatement(long start) {
         return " in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms.";
+    }
+
+    private boolean isSuccessCode(final int httpStatusCode) {
+        return 200 <= httpStatusCode && httpStatusCode <= 499;
     }
 
     InetAddress getInetAddress() {
@@ -143,6 +173,10 @@ public class SingleIpHttpClient implements AutoCloseable {
         return serverConfiguration.getHostname();
     }
 
+    int getFailedResponseCount() {
+        return failedResponseCount.get();
+    }
+
     public HttpClient getHttpClient() {
         return httpClient;
     }
@@ -154,6 +188,7 @@ public class SingleIpHttpClient implements AutoCloseable {
                 ", healthy=" + healthy +
                 ", hostname=" + serverConfiguration.getHostname() +
                 ", healthUri=" + healthUri +
+                ", failedResponseCount=" + failedResponseCount.get() +
                 '}';
     }
 

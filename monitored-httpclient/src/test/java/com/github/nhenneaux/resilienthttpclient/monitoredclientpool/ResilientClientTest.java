@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -9,6 +10,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
@@ -22,15 +24,20 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ResilientClientTest {
 
     static {
@@ -64,7 +71,8 @@ class ResilientClientTest {
 
         // Then
         assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit GET", httpConnectTimeoutException.getMessage());
-
+        verify(ipHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
+        verify(ipHttpClient).incrementFailureCount();
     }
 
     private static InetAddress getInetAddress() {
@@ -103,6 +111,8 @@ class ResilientClientTest {
         // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler);
         assertSame(httpResponse, httpResponseCompletableFuture.get());
+        verify(ipHttpClient, times(1)).refreshFailureCountWithStatusCode(0);
+        verify(ipHttpClient, times(1)).incrementFailureCount();
     }
 
     @Test
@@ -160,6 +170,8 @@ class ResilientClientTest {
         // Then
         verify(httpClient).sendAsync(httpRequest, bodyHandler, pushPromiseHandler);
         assertSame(httpResponse, httpResponseCompletableFuture.get());
+        verify(ipHttpClient, times(1)).refreshFailureCountWithStatusCode(0);
+        verify(ipHttpClient, times(1)).incrementFailureCount();
     }
 
 
@@ -234,12 +246,15 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
         final Error expected = new Error();
         completableFuture.completeExceptionally(expected);
+        SingleIpHttpClient singleIpHttpClient = singleIpHttpClientHealthyMock();
         // When
-        RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(singleIpHttpClientHealthyMock()));
+        RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(singleIpHttpClient));
         CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, roundRobinPool);
         final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause());
+        verify(singleIpHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
+        verify(singleIpHttpClient).incrementFailureCount();
     }
 
     private SingleIpHttpClient singleIpHttpClientHealthyMock() {
@@ -254,11 +269,14 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
         final RuntimeException expected = new RuntimeException();
         completableFuture.completeExceptionally(expected);
+        SingleIpHttpClient singleIpHttpClient = singleIpHttpClientHealthyMock();
         // When
-        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock())));
+        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClient)));
         final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause());
+        verify(singleIpHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
+        verify(singleIpHttpClient).incrementFailureCount();
     }
 
     @Test
@@ -267,11 +285,14 @@ class ResilientClientTest {
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
         final Exception expected = new Exception();
         completableFuture.completeExceptionally(expected);
+        SingleIpHttpClient singleIpHttpClient = singleIpHttpClientHealthyMock();
         // When
-        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClientHealthyMock())));
+        CompletableFuture<HttpResponse<Void>> httpResponseCompletableFuture = ResilientClient.handleConnectTimeout(httpclient -> completableFuture, new RoundRobinPool(List.of(singleIpHttpClient)));
         final CompletionException completionException = assertThrows(CompletionException.class, httpResponseCompletableFuture::join);
         // Then
         assertSame(expected, completionException.getCause().getCause());
+        verify(singleIpHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
+        verify(singleIpHttpClient).incrementFailureCount();
     }
 
     @Test
@@ -333,5 +354,127 @@ class ResilientClientTest {
         final ResilientClient resilientClient = new ResilientClient(() -> roundRobinPool);
         resilientClient.newWebSocketBuilder();
         verify(httpClient).newWebSocketBuilder();
+    }
+
+    @Test
+    void shouldAddFailureCountByStatusCodeIsSuccess() throws IOException, URISyntaxException, InterruptedException {
+        final String hostname = "openjdk.org";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            httpClientPool
+                    .resilientClient()
+                    .send(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding()
+                    );
+
+            assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
+                    .filter(SingleIpHttpClient::isHealthy)
+                    .mapToInt(SingleIpHttpClient::getFailedResponseCount)
+                    .sum(), equalTo(0));
+        }
+    }
+
+    @Test
+    void shouldAddFailureCountByWhenStatusCodeIsNotSuccess() throws IOException, URISyntaxException, InterruptedException {
+        final String hostname = "postman-echo.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            int statusCode = httpClientPool
+                    .resilientClient()
+                    .send(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .GET()
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding()
+                    ).statusCode();
+
+            assertThat("statusCode", statusCode, equalTo(500));
+            assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
+                    .filter(SingleIpHttpClient::isHealthy)
+                    .mapToInt(SingleIpHttpClient::getFailedResponseCount)
+                    .sum(), equalTo(1));
+        }
+    }
+
+    @Test
+    void shouldAddFailureCountByStatusCodeIsSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
+        final String hostname = "openjdk.org";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            httpClientPool
+                    .resilientClient()
+                    .sendAsync(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .GET()
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding()
+                    ).get();
+
+            assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
+                    .filter(SingleIpHttpClient::isHealthy)
+                    .mapToInt(SingleIpHttpClient::getFailedResponseCount)
+                    .sum(), equalTo(0));
+        }
+    }
+
+    @Test
+    void shouldAddFailureCountByWhenStatusCodeIsNotSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
+        final String hostname = "httpbin.org";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            int statusCode = httpClientPool
+                    .resilientClient()
+                    .sendAsync(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .GET()
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding()
+                    ).get().statusCode();
+
+            assertThat("statusCode", statusCode, equalTo(500));
+            assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
+                    .filter(SingleIpHttpClient::isHealthy)
+                    .mapToInt(SingleIpHttpClient::getFailedResponseCount)
+                    .sum(), equalTo(1));
+        }
+    }
+
+    @Test
+    void shouldAddFailureCountByWhenExceptionOccursWhenSendAsync() throws IOException, URISyntaxException {
+        final String hostname = "openjdk.org";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            CompletableFuture<HttpResponse<Object>> sendFuture = httpClientPool
+                    .resilientClient()
+                    .sendAsync(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .GET()
+                                    .build(),
+                            responseInfo -> {
+                                throw new IllegalStateException("invalid body");
+                            }
+                    );
+
+            // Then
+            ExecutionException exception = assertThrows(ExecutionException.class, sendFuture::get);
+            assertEquals("java.lang.IllegalStateException: invalid body", exception.getMessage());
+
+            assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
+                    .filter(SingleIpHttpClient::isHealthy)
+                    .mapToInt(SingleIpHttpClient::getFailedResponseCount)
+                    .sum(), equalTo(1));
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 
+import java.lang.System.Logger;
 import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.Security;
@@ -14,7 +15,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.lang.System.Logger;
 import java.util.stream.Collectors;
 
 import static java.lang.System.Logger.Level;
@@ -130,26 +130,34 @@ public class HttpClientPool implements AutoCloseable {
             return;
         }
 
-        httpClientsCache.set(new RoundRobinPool(
-                updatedLookup
-                        .stream()
-                        .map(inetAddress -> useOldClientOrCreateNew(
+        final List<SingleIpHttpClient> refreshedSingleIpHttpClients = updatedLookup.stream()
+                .map(inetAddress ->
+                        useOldClientOrCreateNew(
                                 singleHttpClientProvider,
                                 inetAddress,
                                 oldListOfClients,
                                 serverConfiguration,
                                 scheduledExecutorService
-                        ))
-                        .collect(Collectors.toUnmodifiableList())
-        ));
+                        )
+                ).collect(Collectors.toUnmodifiableList());
+
+        httpClientsCache.set(new RoundRobinPool(refreshedSingleIpHttpClients));
 
         // Close those clients whose inet address is not present anymore
         oldListOfClients.stream()
-                .filter(not(client -> updatedLookup.contains(client.getInetAddress())))
+                .filter(not(refreshedSingleIpHttpClients::contains))
                 .forEach(oldClient -> {
-                    LOGGER.log(Level.INFO, () -> "The IP " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " is not present in the DNS resolution list any more, closing the HttpClient");
-                    oldClient.close();
+                    LOGGER.log(Level.INFO, () -> "The client with " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " has been refreshed, closing the old instance.");                    oldClient.close();
                 });
+    }
+
+    private static boolean healthyFailureCount(final SingleIpHttpClient singleIpHttpClient, final ServerConfiguration serverConfiguration) {
+        if (singleIpHttpClient.shouldBeRefreshed()) {
+            LOGGER.log(Level.WARNING, "Failed response count (" + serverConfiguration.getFailureResponseCountThreshold() + ") threshold is violated. Decommissioning " + singleIpHttpClient);
+            return false;
+        }
+
+        return true;
     }
 
     private static SingleIpHttpClient useOldClientOrCreateNew(
@@ -159,12 +167,13 @@ public class HttpClientPool implements AutoCloseable {
             final ServerConfiguration serverConfiguration,
             final ScheduledExecutorService scheduledExecutorService
     ) {
-        // Try to find the client with the same inetAddress in the old list and reuse it or build a new one
+        // Try to find the client with the same inetAddress and requires no refreshing in the old list and reuse it or build a new one
         return oldListOfClients.stream()
                 .filter(oldClient -> oldClient.getInetAddress().getHostAddress().equals(inetAddress.getHostAddress()))
+                .filter(oldClient -> healthyFailureCount(oldClient, serverConfiguration))
                 .findAny()
                 .orElseGet(() -> {
-                    LOGGER.log(Level.INFO, () -> "New IP found: " + inetAddress.getHostAddress() + " for hostname " + serverConfiguration.getHostname() + ", creating a new HttpClient");
+                    LOGGER.log(Level.INFO, () -> "New IP found or too many failure for address `" + inetAddress.getHostAddress() + "` and hostname `" + serverConfiguration.getHostname() + "`, creating a new HttpClient");
                     return new SingleIpHttpClient(
                             singleHttpClientProvider.apply(inetAddress),
                             inetAddress,
@@ -184,7 +193,7 @@ public class HttpClientPool implements AutoCloseable {
 
     /**
      * Take the next HTTP client from the pool.<br>
-     * Please note that it uses a round robin internally. So once it reaches the end of the list it starts returning items from the beginning and so on.
+     * Please note that it uses a round-robin internally. So once it reaches the end of the list it starts returning items from the beginning and so on.
      */
     public Optional<SingleIpHttpClient> getNextHttpClient() {
         return client().next();
@@ -231,6 +240,11 @@ public class HttpClientPool implements AutoCloseable {
 
 
         return new HealthCheckResult(status, clients.stream().map(client -> new ConnectionDetail(client.getHostname(), client.getInetAddress().getHostAddress(), client.getHealthUri(), client.getHealthy().get())).collect(Collectors.toUnmodifiableList()));
+    }
+
+    // package-private for testing
+    AtomicReference<RoundRobinPool> getHttpClientsCache() {
+        return httpClientsCache;
     }
 
     @Override

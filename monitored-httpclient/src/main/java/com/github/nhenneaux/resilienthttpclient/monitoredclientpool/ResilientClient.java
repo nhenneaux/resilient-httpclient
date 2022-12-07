@@ -3,6 +3,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.net.Authenticator;
 import java.net.ConnectException;
 import java.net.CookieHandler;
@@ -22,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.lang.System.Logger;
 
 import static java.lang.System.Logger.Level;
 
@@ -104,14 +104,27 @@ class ResilientClient extends HttpClient {
             httpResponseCompletableFuture.completeExceptionally(new HttpConnectTimeoutException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
             return httpResponseCompletableFuture;
         }
+
         return Optional.of(firstClient)
                 .filter(ignored -> triedAddress.isEmpty())
                 .or(roundRobinPool::next)
                 .stream()
                 .peek(singleIpHttpClient -> triedAddress.add(singleIpHttpClient.getInetAddress()))
-                .map(SingleIpHttpClient::getHttpClient)
-                .map(send)
-                .map(httpResponseFuture -> httpResponseFuture.exceptionally(throwable -> {
+                .map(singleIpHttpClient -> new ClientWithResponseFuture<>(singleIpHttpClient, send.apply(singleIpHttpClient.getHttpClient())))
+                .map(clientWithResponseFuture -> addExceptionHandlerFuture(send, roundRobinPool, firstClient, triedAddress, clientWithResponseFuture))
+                .map(ResilientClient::addCounterRefresherFuture)
+                .findAny()
+                .orElseThrow(() -> new IllegalStateException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
+    }
+
+    private static <T> ClientWithResponseFuture<T> addExceptionHandlerFuture(final Function<HttpClient, CompletableFuture<HttpResponse<T>>> send,
+                                                                             final RoundRobinPool roundRobinPool,
+                                                                             final SingleIpHttpClient firstClient,
+                                                                             final List<InetAddress> triedAddress,
+                                                                             final ClientWithResponseFuture<T> clientWithResponseFuture) {
+
+        final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = clientWithResponseFuture.httpResponseFuture
+                .exceptionally(throwable -> {
                     if (Optional.ofNullable(throwable.getCause())
                             .map(Object::getClass)
                             .filter(CONNECT_EXCEPTION_CLASS::contains)
@@ -119,6 +132,7 @@ class ResilientClient extends HttpClient {
                     ) {
                         return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
                     }
+
                     if (throwable instanceof Error) {
                         throw (Error) throwable;
                     }
@@ -126,11 +140,21 @@ class ResilientClient extends HttpClient {
                         throw (RuntimeException) throwable;
                     }
                     throw new IllegalStateException(throwable);
-                }))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
+                });
+
+        return clientWithResponseFuture.withResponseFuture(httpResponseCompletableFuture);
     }
 
+    private static <T> CompletableFuture<HttpResponse<T>> addCounterRefresherFuture(final ClientWithResponseFuture<T> clientWithResponseFuture) {
+        return clientWithResponseFuture.httpResponseFuture
+                .whenComplete((httpResponse, throwable) -> {
+                    if (throwable != null || httpResponse == null) {
+                        clientWithResponseFuture.singleIpHttpClient.incrementFailureCount();
+                    } else {
+                        clientWithResponseFuture.singleIpHttpClient.refreshFailureCountWithStatusCode(httpResponse.statusCode());
+                    }
+                });
+    }
 
     private HttpClient httpClient() {
         return singleIpHttpClient(roundRobinPoolSupplier.get()).getHttpClient();
@@ -147,8 +171,13 @@ class ResilientClient extends HttpClient {
         SingleIpHttpClient client = firstClient;
         while (tried.size() < healthyNodes) {
             try {
-                return client.getHttpClient().send(request, responseBodyHandler);
+                final HttpResponse<T> httpResponse = client.getHttpClient().send(request, responseBodyHandler);
+
+                client.refreshFailureCountWithStatusCode(httpResponse.statusCode());
+                return httpResponse;
             } catch (HttpConnectTimeoutException | ConnectException e) {
+                client.incrementFailureCount();
+
                 var finalClient = client;
                 LOGGER.log(Level.WARNING, () -> "Got a connect timeout when trying to connect to " + finalClient.getInetAddress() + ", already tried " + tried);
                 tried.add(finalClient.getInetAddress());
@@ -178,5 +207,20 @@ class ResilientClient extends HttpClient {
     @Override
     public WebSocket.Builder newWebSocketBuilder() {
         return httpClient().newWebSocketBuilder();
+    }
+
+    private static class ClientWithResponseFuture<T> {
+
+        private final SingleIpHttpClient singleIpHttpClient;
+        private final CompletableFuture<HttpResponse<T>> httpResponseFuture;
+
+        ClientWithResponseFuture(final SingleIpHttpClient singleIpHttpClient, final CompletableFuture<HttpResponse<T>> httpResponseFuture) {
+            this.singleIpHttpClient = singleIpHttpClient;
+            this.httpResponseFuture = httpResponseFuture;
+        }
+
+        ClientWithResponseFuture<T> withResponseFuture(final CompletableFuture<HttpResponse<T>> httpResponseFuture) {
+            return new ClientWithResponseFuture<>(this.singleIpHttpClient, httpResponseFuture);
+        }
     }
 }

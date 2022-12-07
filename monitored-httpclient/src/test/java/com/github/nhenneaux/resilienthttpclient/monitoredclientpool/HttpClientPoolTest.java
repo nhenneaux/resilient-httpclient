@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -29,6 +30,7 @@ import java.security.Security;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,6 +48,8 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -186,7 +190,8 @@ class HttpClientPoolTest {
             assertThat(httpClientPool.toString(),
                     allOf(containsString("SingleIpHttpClient{inetAddress=google.com"),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
-                            containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}")));
+                            containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath=''"),
+                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1, failureResponseCountThreshold= -1}}")));
         }
     }
 
@@ -202,7 +207,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1, failureResponseCountThreshold= -1}}", httpClientPool.toString());
 
     }
 
@@ -779,4 +784,61 @@ class HttpClientPoolTest {
         assertNotNull(response);
     }
 
+    @Test
+    void shouldUpdateToFailedCountForHealthChecksFailed() {
+        final List<String> hosts = List.of("openjdk.org", "en.wikipedia.org");
+        for (String hostname : hosts) {
+            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+            try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+                await().pollDelay(1, TimeUnit.SECONDS)
+                        .atMost(1, TimeUnit.MINUTES)
+                        .until(httpClientPool::check, checkResult -> NOT_ERROR.contains(checkResult.getStatus()));
+                // ipv4 health checks have no failure, unlike ipv6
+                for (final SingleIpHttpClient singleIpHttpClient : httpClientPool.getHttpClientsCache().get().getList()) {
+                    final int failedResponseCount = singleIpHttpClient.getFailedResponseCount();
+
+                    if (singleIpHttpClient.getInetAddress() instanceof Inet4Address) {
+                        assertThat("failedResponseCount", failedResponseCount, equalTo(0));
+                    } else {
+                        assertThat("failedResponseCount", failedResponseCount, greaterThan(0));
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
+        // Given
+        final String hostname = "postman-echo.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0);
+
+        // When
+        try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            await().atMost(Duration.ofSeconds(5))
+                    .pollInterval(Duration.ofMillis(100))
+                    .until(() -> !httpClientPool.getHttpClientsCache().get().getList().isEmpty());
+
+            final Set<SingleIpHttpClient> initialSingleIpHttpClients = collectClients(httpClientPool);
+
+            // send a request to have a client with failed response count of 1
+            httpClientPool
+                    .resilientClient()
+                    .send(
+                            HttpRequest.newBuilder()
+                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .GET()
+                                    .build(),
+                            HttpResponse.BodyHandlers.discarding()
+                    );
+
+            await().atMost(Duration.ofSeconds(5))
+                    .pollInterval(Duration.ofMillis(100))
+                    .until(() -> collectClients(httpClientPool).stream().anyMatch(singleIpHttpClient -> !initialSingleIpHttpClients.contains(singleIpHttpClient)));
+        }
+    }
+
+    private Set<SingleIpHttpClient> collectClients(final HttpClientPool httpClientPool) {
+        return new HashSet<>(httpClientPool.getHttpClientsCache().get().getList());
+    }
 }
