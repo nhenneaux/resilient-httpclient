@@ -365,7 +365,7 @@ class SingleHostHttpClientBuilderTest {
 
     @Test
     void noSubjectAlternativeName() throws UnknownHostException {
-        final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("1.1.1.1"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(1_000))).withTlsNameMatching().withSni().build();
+        final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("1.1.1.1"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5_000))).withTlsNameMatching().withSni().build();
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://1.1.1.1"))

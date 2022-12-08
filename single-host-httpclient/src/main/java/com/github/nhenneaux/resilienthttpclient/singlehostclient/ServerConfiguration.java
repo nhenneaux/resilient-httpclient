@@ -8,7 +8,7 @@ public class ServerConfiguration {
     private static final String DEFAULT_HEALTH_PATH = "";
     private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
-    private static final long DEFAULT_READ_TIMEOUT_IN_MILLISECONDS = -1; // It means there is no read timeout
+    private static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
     private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
 
     private final String hostname;
@@ -16,7 +16,7 @@ public class ServerConfiguration {
     private final String healthPath;
     private final long connectionHealthCheckPeriodInSeconds;
     private final long dnsLookupRefreshPeriodInSeconds;
-    private final long readTimeoutInMilliseconds;
+    private final long healthReadTimeoutInMilliseconds;
     private final int failureResponseCountThreshold;
 
     public ServerConfiguration(String hostname) {
@@ -26,7 +26,7 @@ public class ServerConfiguration {
                 DEFAULT_HEALTH_PATH,
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
-                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS,
+                DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD
         );
     }
@@ -39,7 +39,7 @@ public class ServerConfiguration {
                 DEFAULT_HEALTH_PATH,
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
-                DEFAULT_READ_TIMEOUT_IN_MILLISECONDS,
+                DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD);
     }
 
@@ -49,7 +49,7 @@ public class ServerConfiguration {
             String healthPath,
             long dnsLookupRefreshPeriodInSeconds,
             long connectionHealthCheckPeriodInSeconds,
-            long readTimeoutInMilliseconds,
+            long healthReadTimeoutInMilliseconds,
             int failureResponseCountThreshold
     ) {
         this.hostname = hostname;
@@ -57,7 +57,7 @@ public class ServerConfiguration {
         this.healthPath = healthPath;
         this.connectionHealthCheckPeriodInSeconds = connectionHealthCheckPeriodInSeconds;
         this.dnsLookupRefreshPeriodInSeconds = dnsLookupRefreshPeriodInSeconds;
-        this.readTimeoutInMilliseconds = readTimeoutInMilliseconds;
+        this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
     }
 
@@ -97,10 +97,10 @@ public class ServerConfiguration {
     }
 
     /**
-     * The read timeout in ms. By default it has a value of "-1" which interpreted as no read timeout specified.
+     * The read timeout in ms
      */
-    public long getReadTimeoutInMilliseconds() {
-        return readTimeoutInMilliseconds;
+    public long getHealthReadTimeoutInMilliseconds() {
+        return healthReadTimeoutInMilliseconds;
     }
 
     /**
@@ -120,7 +120,7 @@ public class ServerConfiguration {
                 ", healthPath='" + healthPath + '\'' +
                 ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
                 ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
-                ", readTimeoutInMilliseconds=" + readTimeoutInMilliseconds +
+                ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
                 ", failureResponseCountThreshold= " + failureResponseCountThreshold +
                 '}';
     }

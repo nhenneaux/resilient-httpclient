@@ -191,7 +191,7 @@ class HttpClientPoolTest {
                     allOf(containsString("SingleIpHttpClient{inetAddress=google.com"),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
                             containsString("], position=0}, serverConfiguration=ServerConfiguration{hostname='google.com', port=-1, healthPath=''"),
-                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1, failureResponseCountThreshold= -1}}")));
+                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}")));
         }
     }
 
@@ -207,7 +207,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, readTimeoutInMilliseconds=-1, failureResponseCountThreshold= -1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
 
     }
 
@@ -751,7 +751,7 @@ class HttpClientPoolTest {
         when(serverConfigurationMock.getConnectionHealthCheckPeriodInSeconds()).thenReturn(serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
         when(serverConfigurationMock.getPort()).thenReturn(serverConfiguration.getPort());
-        when(serverConfigurationMock.getReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getReadTimeoutInMilliseconds());
+        when(serverConfigurationMock.getHealthReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getHealthReadTimeoutInMilliseconds());
 
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfigurationMock)) {
             await().pollDelay(10, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
