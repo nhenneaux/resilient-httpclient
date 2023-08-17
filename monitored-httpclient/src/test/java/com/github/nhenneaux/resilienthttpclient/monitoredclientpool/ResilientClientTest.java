@@ -378,15 +378,14 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccess() throws IOException, URISyntaxException, InterruptedException {
-        final String hostname = "postman-echo.com";
+        final String hostname = "httpstat.us";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
             int statusCode = httpClientPool
                     .resilientClient()
                     .send(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .uri(new URL("http", hostname, -1, "/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()
