@@ -75,7 +75,7 @@ class ResilientClientTest {
 
     private static InetAddress getInetAddress() {
         try {
-            return InetAddress.getByAddress(new byte[]{10,1,1,1});
+            return InetAddress.getByAddress(new byte[]{10, 1, 1, 1});
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
@@ -186,7 +186,7 @@ class ResilientClientTest {
 
     private InetAddress inetAddress() {
         try {
-            return InetAddress.getByAddress(new byte[]{10,127,1,1});
+            return InetAddress.getByAddress(new byte[]{10, 127, 1, 1});
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
@@ -382,15 +382,16 @@ class ResilientClientTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
-            int statusCode = httpClientPool
+            HttpResponse httpResponse = httpClientPool
                     .resilientClient()
                     .send(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .uri(new URL("https", hostname, -1, "/status/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()
-                    ).statusCode();
+                    );
+            int statusCode = httpResponse.statusCode();
 
             assertThat("statusCode", statusCode, equalTo(500));
             assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
