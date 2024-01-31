@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 
+import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,7 +39,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
         final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
         // When
@@ -53,7 +54,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeUnHealthyWith500Status() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -71,7 +72,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeRefreshed() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -92,7 +93,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeUnHealthyWith100Status() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -137,7 +138,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldCallCheckHealthStatusIfHealthyIsFalse() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(500);
@@ -154,7 +155,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldntCallCheckHealthStatusIfHealthyIsTrue() {
         // Given
-        final String hostname = "cloudflare.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(200);

@@ -10,8 +10,7 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -67,17 +66,29 @@ import static org.mockito.Mockito.when;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
-
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io","openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "Host");
     }
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        var testClass = testInfo.getTestClass().orElseThrow();
+        var testMethod = testInfo.getTestMethod().orElseThrow();
+        System.out.println(testClass.getSimpleName() + "::" + testMethod.getName() + " test has started.");
+    }
+
+    @AfterEach
+    void tearDown(TestInfo testInfo) {
+        var testClass = testInfo.getTestClass().orElseThrow();
+        var testMethod = testInfo.getTestMethod().orElseThrow();
+        System.out.println(testClass.getSimpleName() + "::" + testMethod.getName() + " test has finished.");
+    }
 
     @Test
     void getNextHttpClient() throws MalformedURLException, URISyntaxException {
-        final List<String> hosts = List.of("openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
-        for (String hostname : hosts) {
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
                 await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
@@ -98,8 +109,7 @@ class HttpClientPoolTest {
 
     @Test
     void resilientClient() throws MalformedURLException, URISyntaxException {
-        final List<String> hosts = List.of("openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
-        for (String hostname : hosts) {
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
             try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
                 await().pollDelay(1, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(httpClientPool::getNextHttpClient, Optional::isPresent);
@@ -118,7 +128,7 @@ class HttpClientPoolTest {
 
     @Test
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
-        String hostname = "openjdk.org";
+        String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
@@ -148,7 +158,7 @@ class HttpClientPoolTest {
 
     @Test
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
-        String hostname = "openjdk.org";
+        String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
@@ -213,8 +223,7 @@ class HttpClientPoolTest {
 
     @Test
     void check() {
-        final List<String> hosts = List.of("openjdk.org", "en.wikipedia.org", "cloudflare.com", "facebook.com");
-        for (String hostname : hosts) {
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
                 await().pollDelay(1, TimeUnit.SECONDS)
@@ -230,7 +239,7 @@ class HttpClientPoolTest {
 
     @Test
     void checkInJson() throws JsonProcessingException {
-        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.org");
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
             final HealthCheckResult result = await()
                     .pollDelay(1, TimeUnit.SECONDS)
@@ -239,7 +248,7 @@ class HttpClientPoolTest {
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
                     );
-            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("\"details\":[{\"hostname\":\"openjdk.org\",\"hostAddress\":\"", "\",\"healthUri\":\"", "\",\"healthy\":true}"));
+            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"" ,"\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"129.159.253.6\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}","]}"));
         }
     }
 
@@ -259,7 +268,7 @@ class HttpClientPoolTest {
     @Test
     void scheduleRefresh() {
         // Given
-        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.org");
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledFuture = mock(ScheduledFuture.class);
         when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
@@ -284,7 +293,7 @@ class HttpClientPoolTest {
     @Test
     void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -324,13 +333,13 @@ class HttpClientPoolTest {
 
     @SuppressWarnings("unchecked")
     private void mockDns(DnsLookupWrapper dnsLookupWrapper, InetAddress byName, Set<InetAddress> of) {
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp("openjdk.org")).thenReturn(Set.of(byName), of);
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(PUBLIC_HOST_TO_TEST.get(0))).thenReturn(Set.of(byName), of);
     }
 
     @Test
     void updatePreviousListWhenNewLookupResult() throws UnknownHostException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -377,7 +386,7 @@ class HttpClientPoolTest {
     @Test
     void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -399,7 +408,7 @@ class HttpClientPoolTest {
     @Test
     void warningHealthWhenOneHostDown() throws UnknownHostException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -452,7 +461,7 @@ class HttpClientPoolTest {
     @Test
     void shouldUseDnsFailsafe() throws IOException, InterruptedException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -485,7 +494,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldUseDnsFailsafeAsync() throws IOException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -637,7 +646,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutEmptyElement() {
         // Given
-        final String hostname = "amazon.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -662,8 +671,8 @@ class HttpClientPoolTest {
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
-        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), ()-> "Not throwing for addresses "+addresses);
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://nicolas.henneaux.io GET", httpConnectTimeoutException.getMessage());
 
     }
 
@@ -685,7 +694,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldUseDnsFailsafeAsyncWithPushPromise() throws IOException {
         // Given
-        final String hostname = "openjdk.org";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -745,8 +754,8 @@ class HttpClientPoolTest {
     @Test
     void shouldNotStopListRefreshingInCaseOfRuntimeException() throws MalformedURLException, URISyntaxException {
         final ServerConfiguration serverConfigurationMock = mock(ServerConfiguration.class);
-        final ServerConfiguration serverConfiguration = new ServerConfiguration("openjdk.org");
-        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx", "openjdk.org");
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
+        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx", PUBLIC_HOST_TO_TEST.get(0));
         when(serverConfigurationMock.getDnsLookupRefreshPeriodInSeconds()).thenReturn(1L);
         when(serverConfigurationMock.getConnectionHealthCheckPeriodInSeconds()).thenReturn(serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
@@ -772,7 +781,7 @@ class HttpClientPoolTest {
     @Test
     void readme() {
         HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
-                new ServerConfiguration("openjdk.org"));
+                new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0)));
         HttpClient resilientClient = singleInstanceByHost.resilientClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://openjdk.org/"))
@@ -786,7 +795,7 @@ class HttpClientPoolTest {
 
     @Test
     void shouldUpdateToFailedCountForHealthChecksFailed() {
-        final List<String> hosts = List.of("openjdk.org", "en.wikipedia.org");
+        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(0), "en.wikipedia.org");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {

@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderIT {
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io","openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -36,8 +37,7 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
         // Given
-        final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
-        for (String hostname : hosts) {
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
             final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
             final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
@@ -61,8 +61,8 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort() throws URISyntaxException {
         // Given
-        final List<String> hosts = List.of("openjdk.java.net", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
-        for (String hostname : hosts) {
+
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
             final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
             final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
@@ -86,7 +86,7 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithHttpClientBuilder() {
         // Given
-        final var hostname = "openjdk.java.net";
+        final var hostname = PUBLIC_HOST_TO_TEST.get(0);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))).withTlsNameMatching().withSni().buildWithHostHeader();
@@ -110,7 +110,7 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
         // Given
-        final var hostname = "openjdk.java.net";
+        final var hostname =PUBLIC_HOST_TO_TEST.get(0);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
@@ -135,7 +135,7 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() {
         // Given
-        final var hostname = "openjdk.java.net";
+        final var hostname = PUBLIC_HOST_TO_TEST.get(0);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader();
