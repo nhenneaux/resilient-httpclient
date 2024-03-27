@@ -112,9 +112,16 @@ public class SingleIpHttpClient implements AutoCloseable {
         final long start = System.nanoTime();
         try {
             final HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder().uri(healthUri);
+
+            if (this.serverConfiguration.getHealthCheckRequestBody() != null) {
+                httpRequestBuilder.headers("Content-Type", "application/json", "Accept", "*/*")
+                        .POST(HttpRequest.BodyPublishers.ofString(this.serverConfiguration.getHealthCheckRequestBody()));
+            }
+
             if (serverConfiguration.getHealthReadTimeoutInMilliseconds() >= 0) {
                 httpRequestBuilder.timeout(Duration.ofMillis(serverConfiguration.getHealthReadTimeoutInMilliseconds()));
             }
+
             final int statusCode = httpClient.sendAsync(httpRequestBuilder.build(), HttpResponse.BodyHandlers.discarding())
                     .thenApply(HttpResponse::statusCode)
                     .join();
@@ -184,12 +191,12 @@ public class SingleIpHttpClient implements AutoCloseable {
     @Override
     public String toString() {
         return "SingleIpHttpClient{" +
-                "inetAddress=" + inetAddress +
-                ", healthy=" + healthy +
-                ", hostname=" + serverConfiguration.getHostname() +
-                ", healthUri=" + healthUri +
-                ", failedResponseCount=" + failedResponseCount.get() +
-                '}';
+               "inetAddress=" + inetAddress +
+               ", healthy=" + healthy +
+               ", hostname=" + serverConfiguration.getHostname() +
+               ", healthUri=" + healthUri +
+               ", failedResponseCount=" + failedResponseCount.get() +
+               '}';
     }
 
     @Override

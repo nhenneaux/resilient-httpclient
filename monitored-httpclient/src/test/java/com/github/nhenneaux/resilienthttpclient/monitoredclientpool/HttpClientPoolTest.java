@@ -217,7 +217,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', healthCheckRequestBody='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
 
     }
 
@@ -820,7 +820,7 @@ class HttpClientPoolTest {
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0);
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", null,1, 1, -1, 0);
 
         // When
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
