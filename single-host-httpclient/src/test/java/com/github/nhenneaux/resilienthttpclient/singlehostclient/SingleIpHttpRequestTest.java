@@ -25,6 +25,7 @@ class SingleIpHttpRequestTest {
         final InetAddress hostAddress = getAddress();
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
+
         assertSame(request.bodyPublisher(), singleIpHttpRequest.bodyPublisher());
     }
 
