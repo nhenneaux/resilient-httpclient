@@ -15,8 +15,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class SingleIpHttpRequestTest {
 
@@ -25,7 +23,6 @@ class SingleIpHttpRequestTest {
         final InetAddress hostAddress = getAddress();
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
-
         assertSame(request.bodyPublisher(), singleIpHttpRequest.bodyPublisher());
     }
 
@@ -60,7 +57,7 @@ class SingleIpHttpRequestTest {
     @Test
     void uri() throws URISyntaxException, UnknownHostException {
         final String hostname = UUID.randomUUID().toString();
-        final InetAddress hostAddress = InetAddress.getByAddress(hostname, new byte[]{10,1,1,1});
+        final InetAddress hostAddress = InetAddress.getByAddress(hostname, new byte[]{10, 1, 1, 1});
         final HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit")).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, hostAddress);
         assertEquals(new URI("https://" + hostAddress.getHostAddress()), singleIpHttpRequest.uri());
@@ -71,7 +68,7 @@ class SingleIpHttpRequestTest {
         final var uri = URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junit");
         final HttpRequest request = HttpRequest.newBuilder().uri(uri).build();
         final SingleIpHttpRequest singleIpHttpRequest = new SingleIpHttpRequest(request, null);
-        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, ()-> SingleIpHttpRequest.newUriWithAddress(uri, null));
+        final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleIpHttpRequest.newUriWithAddress(uri, null));
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
         assertEquals("Cannot build uri https://com.github.nhenneaux.resilienthttpclient.singlehostclient.HttpRequestWithHostHeaderTest.junitwith address null", illegalStateException.getMessage());
     }
