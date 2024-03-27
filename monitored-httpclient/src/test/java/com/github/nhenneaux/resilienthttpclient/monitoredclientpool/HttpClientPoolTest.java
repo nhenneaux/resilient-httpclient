@@ -10,7 +10,11 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -41,8 +45,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.getRequestTransformer;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -66,12 +72,14 @@ import static org.mockito.Mockito.when;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io","openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "Host");
     }
+
     @BeforeEach
     void setUp(TestInfo testInfo) {
         var testClass = testInfo.getTestClass().orElseThrow();
@@ -97,9 +105,9 @@ class HttpClientPoolTest {
                 final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
                 final HttpClient httpClient = singleIpHttpClient.getHttpClient();
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
-                                .build(),
-                        HttpResponse.BodyHandlers.ofString())
+                                        .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                        .build(),
+                                HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
                         .join();
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
@@ -116,9 +124,9 @@ class HttpClientPoolTest {
 
                 final HttpClient httpClient = httpClientPool.resilientClient();
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                                .build(),
-                        HttpResponse.BodyHandlers.ofString())
+                                        .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                        .build(),
+                                HttpResponse.BodyHandlers.ofString())
                         .thenApply(HttpResponse::statusCode)
                         .join();
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
@@ -147,9 +155,9 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", hostname, serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString())
+                                    .uri(new URL("https", hostname, serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
                     .join();
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
@@ -176,9 +184,9 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString())
+                                    .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
                     .join();
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
@@ -217,7 +225,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', healthCheckRequestBody='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
 
     }
 
@@ -248,7 +256,7 @@ class HttpClientPoolTest {
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
                     );
-            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"" ,"\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"129.159.253.6\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}","]}"));
+            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"", "\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"129.159.253.6\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}", "]}"));
         }
     }
 
@@ -380,7 +388,7 @@ class HttpClientPoolTest {
     }
 
     private static InetAddress getInetAddress() throws UnknownHostException {
-        return InetAddress.getByAddress(new byte[]{10,0,0,127});
+        return InetAddress.getByAddress(new byte[]{10, 0, 0, 127});
     }
 
     @Test
@@ -671,7 +679,7 @@ class HttpClientPoolTest {
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
-        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), ()-> "Not throwing for addresses "+addresses);
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), () -> "Not throwing for addresses " + addresses);
         assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://nicolas.henneaux.io GET", httpConnectTimeoutException.getMessage());
 
     }
@@ -761,6 +769,7 @@ class HttpClientPoolTest {
         when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
         when(serverConfigurationMock.getPort()).thenReturn(serverConfiguration.getPort());
         when(serverConfigurationMock.getHealthReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getHealthReadTimeoutInMilliseconds());
+        when(serverConfigurationMock.getRequestTransformer()).thenReturn(serverConfiguration.getRequestTransformer());
 
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfigurationMock)) {
             await().pollDelay(10, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -769,9 +778,9 @@ class HttpClientPoolTest {
             final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
             final HttpClient httpClient = singleIpHttpClient.getHttpClient();
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                            .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfigurationMock.getPort(), serverConfigurationMock.getHealthPath()).toURI())
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString())
+                                    .uri(new URL("https", singleIpHttpClient.getInetAddress().getHostAddress(), serverConfigurationMock.getPort(), serverConfigurationMock.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
                     .join();
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
@@ -820,7 +829,8 @@ class HttpClientPoolTest {
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", null,1, 1, -1, 0);
+        final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer();
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, requestTransformer);
 
         // When
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {

@@ -12,6 +12,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -74,12 +75,13 @@ class SingleIpHttpClientTest {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final HttpClient httpClient = mock(HttpClient.class);
+        final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer();
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(500);
         when(httpClient.sendAsync(captor.capture(), any(DISCARDING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
 
-        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", null, 1, 1, -1, 1);
+        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, requestTransformer);
 
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), serverConfiguration)) {
@@ -128,11 +130,12 @@ class SingleIpHttpClientTest {
     void shouldFailOnMalformedUrl() throws UnknownHostException {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
+        final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer();
         // When - Then
-        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", null, 1, 1, -1, 0);
+        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1, 0, requestTransformer);
         InetAddress localHost = InetAddress.getLocalHost();
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, localHost, serverConfiguration));
-        assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', healthCheckRequestBody='null', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
+        assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
     }
 
     @Test
@@ -168,5 +171,9 @@ class SingleIpHttpClientTest {
             verify(httpClient, times(1)).sendAsync(any(), any());
             assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
         }
+    }
+
+    static Consumer<HttpRequest.Builder> getRequestTransformer() {
+        return builder -> builder.POST(HttpRequest.BodyPublishers.ofString("{\"request\":{\"transactionType\":\"ECHO_TEST\"}}"));
     }
 }
