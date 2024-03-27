@@ -4,6 +4,9 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.net.InetAddress;
@@ -12,6 +15,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,6 +40,14 @@ class SingleIpHttpClientTest {
         SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
     }
 
+    private static Stream<Arguments> getArgumentsForHealthCheckPostRequest() {
+        return Stream.of(
+                Arguments.of("{\"request\":{\"transactionType\":\"ECHO_TEST\"}}", true),
+                Arguments.of("", false),
+                Arguments.of(null, false)
+        );
+    }
+
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
@@ -47,6 +59,23 @@ class SingleIpHttpClientTest {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertTrue(singleIpHttpClient.isHealthy());
+            assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("getArgumentsForHealthCheckPostRequest")
+    void shouldBeHealthyWithPostRequest(final String givenHealthCheckRequestBody, final boolean expectedIsHealthy) {
+        // Given
+        final String hostname = PUBLIC_HOST_TO_TEST.get(7);
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+        final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
+        // When
+        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, ip, new ServerConfiguration(hostname, -1, "/", givenHealthCheckRequestBody, 1, 1, -1, 0))) {
+
+            // Then
+            assertSame(httpClient, singleIpHttpClient.getHttpClient());
+            assertEquals(expectedIsHealthy, singleIpHttpClient.isHealthy());
             assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
         }
     }
@@ -79,7 +108,7 @@ class SingleIpHttpClientTest {
         when(httpResponse.statusCode()).thenReturn(500);
         when(httpClient.sendAsync(captor.capture(), any(DISCARDING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
 
-        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/",null, 1, 1, -1, 1);
+        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", null, 1, 1, -1, 1);
 
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), serverConfiguration)) {
@@ -129,7 +158,7 @@ class SingleIpHttpClientTest {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
         // When - Then
-        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd",null, 1, 1, -1, 0);
+        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", null, 1, 1, -1, 0);
         InetAddress localHost = InetAddress.getLocalHost();
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, localHost, serverConfiguration));
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', healthCheckRequestBody='null', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
@@ -148,7 +177,7 @@ class SingleIpHttpClientTest {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertFalse(singleIpHttpClient.isHealthy());
-            verify(httpClient, times(2)).sendAsync(any(),any());
+            verify(httpClient, times(2)).sendAsync(any(), any());
         }
     }
 
@@ -165,7 +194,7 @@ class SingleIpHttpClientTest {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertTrue(singleIpHttpClient.isHealthy());
-            verify(httpClient, times(1)).sendAsync(any(),any());
+            verify(httpClient, times(1)).sendAsync(any(), any());
             assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
         }
     }
