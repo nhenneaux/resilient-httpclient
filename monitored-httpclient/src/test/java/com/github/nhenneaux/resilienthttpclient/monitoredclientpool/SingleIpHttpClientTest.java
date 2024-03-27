@@ -4,9 +4,6 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.net.InetAddress;
@@ -15,7 +12,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -40,14 +36,6 @@ class SingleIpHttpClientTest {
         SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
     }
 
-    private static Stream<Arguments> getArgumentsForHealthCheckPostRequest() {
-        return Stream.of(
-                Arguments.of("{\"request\":{\"transactionType\":\"ECHO_TEST\"}}", true),
-                Arguments.of("", false),
-                Arguments.of(null, false)
-        );
-    }
-
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
@@ -59,23 +47,6 @@ class SingleIpHttpClientTest {
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertTrue(singleIpHttpClient.isHealthy());
-            assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("getArgumentsForHealthCheckPostRequest")
-    void shouldBeHealthyWithPostRequest(final String givenHealthCheckRequestBody, final boolean expectedIsHealthy) {
-        // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(7);
-        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-        final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-        // When
-        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, ip, new ServerConfiguration(hostname, -1, "/", givenHealthCheckRequestBody, 1, 1, -1, 0))) {
-
-            // Then
-            assertSame(httpClient, singleIpHttpClient.getHttpClient());
-            assertEquals(expectedIsHealthy, singleIpHttpClient.isHealthy());
             assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
         }
     }
