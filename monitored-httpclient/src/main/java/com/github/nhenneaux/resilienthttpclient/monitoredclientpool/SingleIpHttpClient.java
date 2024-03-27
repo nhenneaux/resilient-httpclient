@@ -113,7 +113,7 @@ public class SingleIpHttpClient implements AutoCloseable {
         try {
             final HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder().uri(healthUri);
 
-            if (this.serverConfiguration.getHealthCheckRequestBody() != null) {
+            if (this.serverConfiguration.getHealthCheckRequestBody() != null && !this.serverConfiguration.getHealthCheckRequestBody().isEmpty()) {
                 httpRequestBuilder.headers("Content-Type", "application/json", "Accept", "*/*")
                         .POST(HttpRequest.BodyPublishers.ofString(this.serverConfiguration.getHealthCheckRequestBody()));
             }
