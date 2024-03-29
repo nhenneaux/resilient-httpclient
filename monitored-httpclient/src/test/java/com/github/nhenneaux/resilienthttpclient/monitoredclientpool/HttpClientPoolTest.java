@@ -213,7 +213,6 @@ class HttpClientPoolTest {
 
     private static ConditionFactory waitOneMinute(String hostname) {
         return await("waiting " + hostname + " being available")
-                .pollDelay(1, TimeUnit.SECONDS)
                 .atMost(1, TimeUnit.MINUTES);
     }
 
