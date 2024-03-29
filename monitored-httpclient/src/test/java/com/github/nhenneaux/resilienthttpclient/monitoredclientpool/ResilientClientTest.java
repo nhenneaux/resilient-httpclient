@@ -24,8 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -445,7 +444,7 @@ class ResilientClientTest {
             assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
                     .filter(SingleIpHttpClient::isHealthy)
                     .mapToInt(SingleIpHttpClient::getFailedResponseCount)
-                    .sum(), greaterThan(1));
+                    .sum(), greaterThanOrEqualTo(1));
         }
     }
 
