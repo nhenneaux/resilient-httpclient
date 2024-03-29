@@ -444,7 +444,7 @@ class ResilientClientTest {
             assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
                     .filter(SingleIpHttpClient::isHealthy)
                     .mapToInt(SingleIpHttpClient::getFailedResponseCount)
-                    .sum(), equalTo(1));
+                    .sum(), equalTo(1)); // todo sometime 2
         }
     }
 
