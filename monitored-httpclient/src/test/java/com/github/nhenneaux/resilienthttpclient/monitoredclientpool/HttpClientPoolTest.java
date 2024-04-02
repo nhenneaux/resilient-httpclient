@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.getDefaultRequestTransformer;
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -796,7 +796,7 @@ class HttpClientPoolTest {
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, getDefaultRequestTransformer());
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER);
 
         // When
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
