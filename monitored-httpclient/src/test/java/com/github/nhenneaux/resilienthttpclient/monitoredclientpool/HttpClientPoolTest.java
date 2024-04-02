@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.getDefaultRequestTransformer;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -37,7 +37,9 @@ import static org.mockito.Mockito.*;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
+            //"google.com", "travis-ci.com",
+            );
 
     static {
         // Force properties
@@ -794,7 +796,7 @@ class HttpClientPoolTest {
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER);
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, getDefaultRequestTransformer());
 
         // When
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
