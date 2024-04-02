@@ -12,7 +12,7 @@ public class ServerConfiguration {
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
     private static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
     private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
-    public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = request -> {
+    private static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = request -> {
     };
 
     private final String hostname;
@@ -124,6 +124,11 @@ public class ServerConfiguration {
 
     public Consumer<HttpRequest.Builder> getRequestTransformer() {
         return requestTransformer;
+    }
+
+    // package-private for testing
+    public static Consumer<HttpRequest.Builder> getDefaultRequestTransformer() {
+        return DEFAULT_REQUEST_TRANSFORMER;
     }
 
     @Override

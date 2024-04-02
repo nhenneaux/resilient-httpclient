@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
-import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.getDefaultRequestTransformer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,6 +33,8 @@ class SingleIpHttpClientTest {
     static {
         // Force init of the client without hostname check, otherwise it is cached
         SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
+        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");
     }
 
     @Test
@@ -78,7 +80,7 @@ class SingleIpHttpClientTest {
         when(httpResponse.statusCode()).thenReturn(500);
         when(httpClient.sendAsync(captor.capture(), any(DISCARDING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
 
-        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, DEFAULT_REQUEST_TRANSFORMER);
+        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, getDefaultRequestTransformer());
 
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), serverConfiguration)) {
@@ -128,7 +130,7 @@ class SingleIpHttpClientTest {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
         // When - Then
-        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER);
+        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1, 0, getDefaultRequestTransformer());
         InetAddress localHost = InetAddress.getLocalHost();
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, localHost, serverConfiguration));
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
