@@ -187,12 +187,12 @@ public class SingleIpHttpClient implements AutoCloseable {
     @Override
     public String toString() {
         return "SingleIpHttpClient{" +
-               "inetAddress=" + inetAddress +
-               ", healthy=" + healthy +
-               ", hostname=" + serverConfiguration.getHostname() +
-               ", healthUri=" + healthUri +
-               ", failedResponseCount=" + failedResponseCount.get() +
-               '}';
+                "inetAddress=" + inetAddress +
+                ", healthy=" + healthy +
+                ", hostname=" + serverConfiguration.getHostname() +
+                ", healthUri=" + healthUri +
+                ", failedResponseCount=" + failedResponseCount.get() +
+                '}';
     }
 
     @Override
