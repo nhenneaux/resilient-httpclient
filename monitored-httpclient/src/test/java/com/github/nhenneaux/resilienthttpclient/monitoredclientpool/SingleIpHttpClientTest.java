@@ -44,7 +44,6 @@ class SingleIpHttpClientTest {
 
         // Force init of the client without hostname check, otherwise it is cached
         SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
-
     }
 
     @Test
