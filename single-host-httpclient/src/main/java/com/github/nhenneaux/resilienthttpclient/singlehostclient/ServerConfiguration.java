@@ -126,21 +126,16 @@ public class ServerConfiguration {
         return requestTransformer;
     }
 
-    // package-private for testing
-    public static Consumer<HttpRequest.Builder> getDefaultRequestTransformer() {
-        return DEFAULT_REQUEST_TRANSFORMER;
-    }
-
     @Override
     public String toString() {
         return "ServerConfiguration{" +
-               "hostname='" + hostname + '\'' +
-               ", port=" + port +
-               ", healthPath='" + healthPath + '\'' +
-               ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
-               ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
-               ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
-               ", failureResponseCountThreshold= " + failureResponseCountThreshold +
-               '}';
+                "hostname='" + hostname + '\'' +
+                ", port=" + port +
+                ", healthPath='" + healthPath + '\'' +
+                ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
+                ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
+                ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
+                ", failureResponseCountThreshold= " + failureResponseCountThreshold +
+                '}';
     }
 }

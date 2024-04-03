@@ -28,8 +28,6 @@ class SingleIpHttpClientTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-//        SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
-//        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "true");
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");

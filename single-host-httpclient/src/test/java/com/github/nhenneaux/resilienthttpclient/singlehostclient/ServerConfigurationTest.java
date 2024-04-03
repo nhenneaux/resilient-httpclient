@@ -3,8 +3,7 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.net.http.HttpRequest;
-import java.util.function.Consumer;
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 
 class ServerConfigurationTest {
 
@@ -41,8 +40,6 @@ class ServerConfigurationTest {
     @Test
     void shouldProperlyReturnConfiguredValues() {
         // Given
-        Consumer<HttpRequest.Builder> requestTransformer = builder -> builder.POST(HttpRequest.BodyPublishers.ofString("payload"));
-
         final ServerConfiguration serverConfiguration = new ServerConfiguration(
                 "hostname",
                 1234,
@@ -51,7 +48,7 @@ class ServerConfigurationTest {
                 555L,
                 111L,
                 0,
-                requestTransformer
+                DEFAULT_REQUEST_TRANSFORMER
         );
 
         // When-Then
