@@ -1,6 +1,8 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
+import java.net.http.HttpRequest;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class ServerConfiguration {
 
@@ -10,6 +12,8 @@ public class ServerConfiguration {
     private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
     private static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
     private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
+    public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = request -> {
+    };
 
     private final String hostname;
     private final int port;
@@ -18,6 +22,7 @@ public class ServerConfiguration {
     private final long dnsLookupRefreshPeriodInSeconds;
     private final long healthReadTimeoutInMilliseconds;
     private final int failureResponseCountThreshold;
+    private final Consumer<HttpRequest.Builder> requestTransformer;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -27,7 +32,8 @@ public class ServerConfiguration {
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
-                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD
+                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
+                DEFAULT_REQUEST_TRANSFORMER
         );
     }
 
@@ -40,7 +46,9 @@ public class ServerConfiguration {
                 DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
-                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD);
+                DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
+                DEFAULT_REQUEST_TRANSFORMER
+        );
     }
 
     public ServerConfiguration(
@@ -50,7 +58,8 @@ public class ServerConfiguration {
             long dnsLookupRefreshPeriodInSeconds,
             long connectionHealthCheckPeriodInSeconds,
             long healthReadTimeoutInMilliseconds,
-            int failureResponseCountThreshold
+            int failureResponseCountThreshold,
+            Consumer<HttpRequest.Builder> requestTransformer
     ) {
         this.hostname = hostname;
         this.port = port;
@@ -59,6 +68,7 @@ public class ServerConfiguration {
         this.dnsLookupRefreshPeriodInSeconds = dnsLookupRefreshPeriodInSeconds;
         this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
+        this.requestTransformer = requestTransformer;
     }
 
     /**
@@ -110,6 +120,10 @@ public class ServerConfiguration {
      */
     public int getFailureResponseCountThreshold() {
         return failureResponseCountThreshold;
+    }
+
+    public Consumer<HttpRequest.Builder> getRequestTransformer() {
+        return requestTransformer;
     }
 
     @Override

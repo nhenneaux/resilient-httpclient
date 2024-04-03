@@ -3,10 +3,12 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
+
 class ServerConfigurationTest {
 
     @Test
-    void shouldProperlyReturnDefaultValues( ) {
+    void shouldProperlyReturnDefaultValues() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration("hostname");
 
@@ -45,7 +47,8 @@ class ServerConfigurationTest {
                 444L,
                 555L,
                 111L,
-                0
+                0,
+                DEFAULT_REQUEST_TRANSFORMER
         );
 
         // When-Then
