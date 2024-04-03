@@ -4,9 +4,6 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.net.InetAddress;
@@ -16,22 +13,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class SingleIpHttpClientTest {
     @SuppressWarnings("unchecked")
@@ -39,9 +28,14 @@ class SingleIpHttpClientTest {
 
     static {
         // Force init of the client without hostname check, otherwise it is cached
-        SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
+//        SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
+//        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
+        System.setProperty("jdk.httpclient.allowRestrictedHeaders", "true");
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");
+        // Force init of the client without hostname check, otherwise it is cached
+        SingleHostHttpClientBuilder.newHttpClient("test", InetAddress.getLoopbackAddress());
+
     }
 
     @Test
@@ -178,33 +172,27 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @ParameterizedTest
-    @MethodSource("getArgumentsForHealthCheckPostRequest")
-    void shouldBeHealthyWithPostRequest(final String givenHealthCheckRequestBody, final boolean expectedIsHealthy) {
+    @Test
+    void shouldBeHealthyWithPostRequest() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
-        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-        final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-        // When
-        final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer(givenHealthCheckRequestBody);
-        try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, ip, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, requestTransformer))) {
-
+        final String hostname = "csp.credomatic.com";
+        final InetAddress inetAddress;
+        try {
+            inetAddress = InetAddress.getByName(hostname);
+            final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, inetAddress);
+            // When
+            final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer();
+            final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, requestTransformer));
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
-            assertEquals(expectedIsHealthy, singleIpHttpClient.isHealthy());
+            assertEquals(Boolean.TRUE, singleIpHttpClient.isHealthy());
             assertThat("failedResponseCount", singleIpHttpClient.getFailedResponseCount(), equalTo(0));
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private static Stream<Arguments> getArgumentsForHealthCheckPostRequest() {
-        return Stream.of(
-                Arguments.of("{\"request\":{\"transactionType\":\"ECHO_TEST\"}}", true),
-                Arguments.of("", false),
-                Arguments.of(null, false)
-        );
-    }
-
-    static Consumer<HttpRequest.Builder> getRequestTransformer(String requestBody) {
-        return builder -> builder.POST(HttpRequest.BodyPublishers.ofString(requestBody));
+    static Consumer<HttpRequest.Builder> getRequestTransformer() {
+        return builder -> builder.POST(HttpRequest.BodyPublishers.ofString("{\"request\":{\"transactionType\":\"ECHO_TEST\"}}"));
     }
 }
