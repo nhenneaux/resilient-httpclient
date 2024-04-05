@@ -58,7 +58,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(444L, serverConfiguration.getDnsLookupRefreshPeriodInSeconds());
         Assertions.assertEquals(111L, serverConfiguration.getHealthReadTimeoutInMilliseconds());
         Assertions.assertEquals(1234, serverConfiguration.getPort());
-        Assertions.assertEquals("ServerConfiguration{hostname='hostname', port=1234, healthPath='/health', healthCheckRequestBody='49070868', connectionHealthCheckPeriodInSeconds=555, dnsLookupRefreshPeriodInSeconds=444, healthReadTimeoutInMilliseconds=111, failureResponseCountThreshold= 0}", serverConfiguration.toString());
+        Assertions.assertEquals("ServerConfiguration{hostname='hostname', port=1234, healthPath='/health', connectionHealthCheckPeriodInSeconds=555, dnsLookupRefreshPeriodInSeconds=444, healthReadTimeoutInMilliseconds=111, failureResponseCountThreshold= 0}", serverConfiguration.toString());
     }
 
 
