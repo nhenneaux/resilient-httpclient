@@ -4,6 +4,9 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.net.InetAddress;
@@ -13,14 +16,22 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class SingleIpHttpClientTest {
     @SuppressWarnings("unchecked")
@@ -170,8 +181,9 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test
-    void shouldBeHealthyWithPostRequest() {
+    @ParameterizedTest
+    @MethodSource("getArgumentsForHealthCheckPostRequest")
+    void shouldBeHealthyWithPostRequest(final Consumer<HttpRequest.Builder> givenRequestTransformer) {
         // Given
         final String hostname = "csp.credomatic.com";
         final InetAddress inetAddress;
@@ -179,8 +191,7 @@ class SingleIpHttpClientTest {
             inetAddress = InetAddress.getByName(hostname);
             final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, inetAddress);
             // When
-            final Consumer<HttpRequest.Builder> requestTransformer = getRequestTransformer();
-            final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, requestTransformer));
+            final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, givenRequestTransformer));
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
             assertEquals(Boolean.TRUE, singleIpHttpClient.isHealthy());
@@ -188,6 +199,13 @@ class SingleIpHttpClientTest {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Stream<Arguments> getArgumentsForHealthCheckPostRequest() {
+        return Stream.of(
+                Arguments.of(getRequestTransformer()),
+                Arguments.of((Object) null)
+        );
     }
 
     static Consumer<HttpRequest.Builder> getRequestTransformer() {
