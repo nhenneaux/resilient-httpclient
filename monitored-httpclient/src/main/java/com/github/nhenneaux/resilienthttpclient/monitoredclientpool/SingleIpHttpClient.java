@@ -117,10 +117,10 @@ public class SingleIpHttpClient implements AutoCloseable {
                 httpRequestBuilder.timeout(Duration.ofMillis(serverConfiguration.getHealthReadTimeoutInMilliseconds()));
             }
 
-            Consumer<HttpRequest.Builder> requestTransformer = serverConfiguration.getRequestTransformer() != null ? serverConfiguration.getRequestTransformer() : builder -> {
-            };
-
-            requestTransformer.accept(httpRequestBuilder);
+            final Consumer<HttpRequest.Builder> requestTransformer = serverConfiguration.getRequestTransformer();
+            if (requestTransformer != null) {
+                requestTransformer.accept(httpRequestBuilder);
+            }
 
             final int statusCode = httpClient.sendAsync(httpRequestBuilder.build(), HttpResponse.BodyHandlers.discarding())
                     .thenApply(HttpResponse::statusCode)

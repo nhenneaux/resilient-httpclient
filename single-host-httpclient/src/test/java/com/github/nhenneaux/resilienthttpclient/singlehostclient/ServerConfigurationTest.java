@@ -44,7 +44,6 @@ class ServerConfigurationTest {
                 "hostname",
                 1234,
                 "/health",
-                "49070868",
                 444L,
                 555L,
                 111L,
