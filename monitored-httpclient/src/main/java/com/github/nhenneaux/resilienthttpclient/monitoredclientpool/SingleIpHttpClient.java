@@ -19,6 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static java.lang.System.Logger.Level;
 
@@ -116,7 +117,10 @@ public class SingleIpHttpClient implements AutoCloseable {
                 httpRequestBuilder.timeout(Duration.ofMillis(serverConfiguration.getHealthReadTimeoutInMilliseconds()));
             }
 
-            serverConfiguration.getRequestTransformer().accept(httpRequestBuilder);
+            Consumer<HttpRequest.Builder> requestTransformer = serverConfiguration.getRequestTransformer() != null ? serverConfiguration.getRequestTransformer() : builder -> {
+            };
+
+            requestTransformer.accept(httpRequestBuilder);
 
             final int statusCode = httpClient.sendAsync(httpRequestBuilder.build(), HttpResponse.BodyHandlers.discarding())
                     .thenApply(HttpResponse::statusCode)
@@ -187,12 +191,12 @@ public class SingleIpHttpClient implements AutoCloseable {
     @Override
     public String toString() {
         return "SingleIpHttpClient{" +
-                "inetAddress=" + inetAddress +
-                ", healthy=" + healthy +
-                ", hostname=" + serverConfiguration.getHostname() +
-                ", healthUri=" + healthUri +
-                ", failedResponseCount=" + failedResponseCount.get() +
-                '}';
+               "inetAddress=" + inetAddress +
+               ", healthy=" + healthy +
+               ", hostname=" + serverConfiguration.getHostname() +
+               ", healthUri=" + healthUri +
+               ", failedResponseCount=" + failedResponseCount.get() +
+               '}';
     }
 
     @Override
