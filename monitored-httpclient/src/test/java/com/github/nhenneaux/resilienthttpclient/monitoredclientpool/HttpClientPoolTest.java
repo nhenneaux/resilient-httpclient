@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrapper;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
@@ -69,6 +70,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("resource") // HttpClient and ExecutorService not closeable on Java 17
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
@@ -105,8 +107,10 @@ class HttpClientPoolTest {
                         .until(httpClientPool::getNextHttpClient, Optional::isPresent);
 
                 final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
-                final SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow();
-                final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+                final HttpClient httpClient;
+                try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
+                    httpClient = singleIpHttpClient.getHttpClient();
+                }
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
                                         .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
                                         .build(),
@@ -269,15 +273,15 @@ class HttpClientPoolTest {
     }
 
     private ObjectMapper objectMapper() {
-        return new ObjectMapper()
+        return JsonMapper.builder()
                 .configure(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(SerializationFeature.WRITE_DATES_WITH_ZONE_ID, false)
-                .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
                 .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                .serializationInclusion(JsonInclude.Include.NON_NULL).build();
     }
 
 
@@ -378,7 +382,7 @@ class HttpClientPoolTest {
         });
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress secondAddress = getInetAddress();
+        final InetAddress secondAddress = localInetAddress();
         final InetAddress firstAddress = InetAddress.getByName(hostname);
 
         mockDns(dnsLookupWrapper, firstAddress, Set.of(secondAddress));
@@ -395,7 +399,7 @@ class HttpClientPoolTest {
         verify(scheduledDnsRefreshFuture).cancel(true);
     }
 
-    private static InetAddress getInetAddress() throws UnknownHostException {
+    private static InetAddress localInetAddress() throws UnknownHostException {
         return InetAddress.getByAddress(new byte[]{10, 0, 0, 127});
     }
 
@@ -447,7 +451,7 @@ class HttpClientPoolTest {
         });
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress secondAddress = getInetAddress();
+        final InetAddress secondAddress = localInetAddress();
         final InetAddress firstAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(Set.of(firstAddress, secondAddress));
         // When
@@ -482,7 +486,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = getInetAddress();
+        final InetAddress firstAddress = localInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
@@ -515,7 +519,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = getInetAddress();
+        final InetAddress firstAddress = localInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
@@ -564,25 +568,16 @@ class HttpClientPoolTest {
 
     @Test
     @Timeout(20)
-    void shouldConnectTimeout() {
+    void shouldConnectTimeout() throws UnknownHostException {
         // Given
-        final String hostname = "amazon.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
-        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
-        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
-                .skip(1)
-                .map(address -> createSingleClient(hostname, serverConfiguration, address))
-                .toArray(Optional[]::new);
-        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
-        when(roundRobinPool.next()).thenReturn(firstSingleClient, optionals);
-        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(Arrays.asList(optionals));
-        clients.add(firstSingleClient);
-        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+        final Set<InetAddress> addresses = mockForConnectTimeout(dnsLookupWrapper, hostname, serverConfiguration, roundRobinPool);
 
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
@@ -595,39 +590,40 @@ class HttpClientPoolTest {
 
     @Test
     @Timeout(20)
-    void shouldConnectTimeoutSync() {
+    void shouldConnectTimeoutSync() throws UnknownHostException {
         // Given
-        final String hostname = "amazon.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
-        final Set<InetAddress> addresses = dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname);
-        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] optionals = addresses.stream()
-                .skip(1)
-                .map(address -> createSingleClient(hostname, serverConfiguration, address))
-                .toArray(Optional[]::new);
-        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
-        when(roundRobinPool.next()).thenReturn(firstSingleClient, optionals);
-        final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(Arrays.asList(optionals));
-        clients.add(firstSingleClient);
-        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+        final Set<InetAddress> addresses = mockForConnectTimeout(dnsLookupWrapper, hostname, serverConfiguration, roundRobinPool);
+        HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
         // Then
-        final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
-
         final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()));
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://amazon.com GET", httpConnectTimeoutException.getMessage());
 
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://" + hostname + " GET", httpConnectTimeoutException.getMessage());
+
+    }
+
+    private Set<InetAddress> mockForConnectTimeout(DnsLookupWrapper dnsLookupWrapper, String hostname, ServerConfiguration serverConfiguration, RoundRobinPool roundRobinPool) throws UnknownHostException {
+        final InetAddress nonRoutableAddress = InetAddress.getByName("10.255.255.1");
+
+        final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, nonRoutableAddress);
+        when(roundRobinPool.next()).thenReturn(firstSingleClient);
+
+        when(roundRobinPool.getList()).thenReturn(List.of(firstSingleClient.orElseThrow()));
+        return Set.of(nonRoutableAddress);
     }
 
     @Test
     @Timeout(20)
     void shouldConnectTimeoutDuplicateAddressList() {
         // Given
-        final String hostname = "amazon.com";
+        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -647,7 +643,7 @@ class HttpClientPoolTest {
         when(roundRobinPool.next()).thenReturn(firstSingleClient, duplicateClientsArray);
         final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
         clients.add(firstSingleClient);
-        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+        when(roundRobinPool.getList()).thenReturn(clients.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()));
 
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
@@ -676,13 +672,13 @@ class HttpClientPoolTest {
                 .toArray(Optional[]::new);
         final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, addresses.iterator().next());
         final List<Optional<SingleIpHttpClient>> optionalList = Arrays.asList(optionals);
-        final List<Optional<SingleIpHttpClient>> optionalsDuplicate = new ArrayList<>(optionalList);
-        optionalsDuplicate.add(Optional.empty());
-        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] clientsArrayWithEmpty = optionalsDuplicate.toArray(Optional[]::new);
+        final List<Optional<SingleIpHttpClient>> clientsWithEmpty = new ArrayList<>(optionalList);
+        clientsWithEmpty.add(Optional.empty());
+        @SuppressWarnings("unchecked") final Optional<SingleIpHttpClient>[] clientsArrayWithEmpty = clientsWithEmpty.toArray(Optional[]::new);
         when(roundRobinPool.next()).thenReturn(firstSingleClient, clientsArrayWithEmpty);
         final List<Optional<SingleIpHttpClient>> clients = new ArrayList<>(optionalList);
         clients.add(firstSingleClient);
-        when(roundRobinPool.getList()).thenReturn(clients.stream().map(Optional::get).collect(Collectors.toList()));
+        when(roundRobinPool.getList()).thenReturn(clients.stream().filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList()));
 
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
@@ -715,7 +711,7 @@ class HttpClientPoolTest {
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
         final DnsLookupWrapper dnsLookupWrapper = mock(DnsLookupWrapper.class);
-        final InetAddress firstAddress = getInetAddress();
+        final InetAddress firstAddress = localInetAddress();
         final InetAddress secondAddress = InetAddress.getByName(hostname);
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(hostname)).thenReturn(new CopyOnWriteArraySet<>(Arrays.asList(firstAddress, secondAddress)));
         // When
