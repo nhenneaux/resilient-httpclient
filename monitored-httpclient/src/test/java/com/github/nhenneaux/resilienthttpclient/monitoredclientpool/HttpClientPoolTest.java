@@ -574,10 +574,9 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
-        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
-        final Set<InetAddress> addresses = mockForConnectTimeout(dnsLookupWrapper, hostname, serverConfiguration, roundRobinPool);
+        final Set<InetAddress> addresses = mockForConnectTimeout(hostname, serverConfiguration, roundRobinPool);
 
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
@@ -596,10 +595,9 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
-        final DnsLookupWrapper dnsLookupWrapper = new DnsLookupWrapper();
         // When
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
-        final Set<InetAddress> addresses = mockForConnectTimeout(dnsLookupWrapper, hostname, serverConfiguration, roundRobinPool);
+        final Set<InetAddress> addresses = mockForConnectTimeout(hostname, serverConfiguration, roundRobinPool);
         HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
         // Then
@@ -609,7 +607,7 @@ class HttpClientPoolTest {
 
     }
 
-    private Set<InetAddress> mockForConnectTimeout(DnsLookupWrapper dnsLookupWrapper, String hostname, ServerConfiguration serverConfiguration, RoundRobinPool roundRobinPool) throws UnknownHostException {
+    private Set<InetAddress> mockForConnectTimeout(String hostname, ServerConfiguration serverConfiguration, RoundRobinPool roundRobinPool) throws UnknownHostException {
         final InetAddress nonRoutableAddress = InetAddress.getByName("10.255.255.1");
 
         final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, nonRoutableAddress);
