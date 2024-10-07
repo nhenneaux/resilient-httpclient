@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
@@ -29,19 +29,19 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.2.1</version>
+            <version>4.2.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
