@@ -5,7 +5,7 @@
 
     <groupId>com.github.nhenneaux.resilienthttpclient</groupId>
     <artifactId>resilient-httpclient</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>pom</packaging>
 
     <name>Resilient Java HTTP client based on java.net.http.HttpClient</name>
@@ -29,19 +29,19 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.2.1</version>
+            <version>4.2.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -112,7 +112,7 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
-                            <keyname>8C334D53759C56CAFF1B5E9BBE0ED98B46B1B2EA</keyname>
+                            <keyname>49A190634782F9EF41B285A460440EA3116337CE</keyname>
                             <!-- Configuration to prevent the 'Signing Prompt' or the  -->
                             <!-- 'gpg: signing failed: No such file or directory' error -->
                             <!-- See https://myshittycode.com/2017/08/07/maven-gpg-plugin-prevent-signing-prompt-or-gpg-signing-failed-no-such-file-or-directory-error/ -->
