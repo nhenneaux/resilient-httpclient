@@ -90,7 +90,7 @@ public class SingleIpHttpClient implements AutoCloseable {
 
     private URI healthUri(ServerConfiguration serverConfiguration) {
         try {
-            return new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+            return new URL(serverConfiguration.getProtocol(), serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
         } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalArgumentException("Cannot build health URI from " + serverConfiguration, e);
         }

@@ -13,6 +13,7 @@ public class ServerConfiguration {
     private static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
     private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
+    private static final String DEFAULT_PROTOCOL = "https";
 
     private final String hostname;
     private final int port;
@@ -22,6 +23,7 @@ public class ServerConfiguration {
     private final long healthReadTimeoutInMilliseconds;
     private final int failureResponseCountThreshold;
     private final Consumer<HttpRequest.Builder> requestTransformer;
+    private final String protocol;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -32,7 +34,8 @@ public class ServerConfiguration {
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
-                DEFAULT_REQUEST_TRANSFORMER
+                DEFAULT_REQUEST_TRANSFORMER,
+                DEFAULT_PROTOCOL
         );
     }
 
@@ -46,7 +49,8 @@ public class ServerConfiguration {
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
-                DEFAULT_REQUEST_TRANSFORMER
+                DEFAULT_REQUEST_TRANSFORMER,
+                DEFAULT_PROTOCOL
         );
     }
 
@@ -59,7 +63,8 @@ public class ServerConfiguration {
             long connectionHealthCheckPeriodInSeconds,
             long healthReadTimeoutInMilliseconds,
             int failureResponseCountThreshold,
-            Consumer<HttpRequest.Builder> requestTransformer
+            Consumer<HttpRequest.Builder> requestTransformer,
+            String protocol
     ) {
         this.hostname = hostname;
         this.port = port;
@@ -69,6 +74,7 @@ public class ServerConfiguration {
         this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
         this.requestTransformer = requestTransformer;
+        this.protocol = protocol;
     }
 
     /**
@@ -126,16 +132,24 @@ public class ServerConfiguration {
         return requestTransformer;
     }
 
+    /**
+     * The protocol to be used in requests: http or https
+     */
+    public String getProtocol() {
+        return protocol;
+    }
+
     @Override
     public String toString() {
         return "ServerConfiguration{" +
-               "hostname='" + hostname + '\'' +
-               ", port=" + port +
-               ", healthPath='" + healthPath + '\'' +
-               ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
-               ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
-               ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
-               ", failureResponseCountThreshold= " + failureResponseCountThreshold +
-               '}';
+                "hostname='" + hostname + '\'' +
+                ", port=" + port +
+                ", healthPath='" + healthPath + '\'' +
+                ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
+                ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
+                ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
+                ", failureResponseCountThreshold= " + failureResponseCountThreshold +
+                ", protocol= " + protocol +
+                '}';
     }
 }
