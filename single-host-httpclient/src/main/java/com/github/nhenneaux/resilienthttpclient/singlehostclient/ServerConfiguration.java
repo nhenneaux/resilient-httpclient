@@ -1,6 +1,7 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import java.net.http.HttpRequest;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -14,6 +15,7 @@ public class ServerConfiguration {
     private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
     private static final String DEFAULT_PROTOCOL = "https";
+    private static final List<String> PROTOCOLS = List.of("http", "https");
 
     private final String hostname;
     private final int port;
@@ -63,6 +65,20 @@ public class ServerConfiguration {
             long connectionHealthCheckPeriodInSeconds,
             long healthReadTimeoutInMilliseconds,
             int failureResponseCountThreshold,
+            Consumer<HttpRequest.Builder> requestTransformer
+    ) {
+        this(hostname, port, healthPath, dnsLookupRefreshPeriodInSeconds, connectionHealthCheckPeriodInSeconds, healthReadTimeoutInMilliseconds, failureResponseCountThreshold, requestTransformer, DEFAULT_PROTOCOL);
+    }
+
+    @SuppressWarnings("java:S107")// All parameters are needed
+    public ServerConfiguration(
+            String hostname,
+            int port,
+            String healthPath,
+            long dnsLookupRefreshPeriodInSeconds,
+            long connectionHealthCheckPeriodInSeconds,
+            long healthReadTimeoutInMilliseconds,
+            int failureResponseCountThreshold,
             Consumer<HttpRequest.Builder> requestTransformer,
             String protocol
     ) {
@@ -74,6 +90,9 @@ public class ServerConfiguration {
         this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
         this.requestTransformer = requestTransformer;
+        if (protocol == null || !PROTOCOLS.contains(protocol)) {
+            throw new IllegalArgumentException("Protocol should be https or http, but was: " + protocol);
+        }
         this.protocol = protocol;
     }
 
