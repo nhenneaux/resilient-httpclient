@@ -25,7 +25,7 @@ import static java.lang.System.Logger.Level;
 
 public class SingleIpHttpClient implements AutoCloseable {
 
-    private static final Logger LOGGER = System.getLogger(SingleIpHttpClient.class.getSimpleName());
+    private static final Logger LOGGER = System.getLogger(SingleIpHttpClient.class.getName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
