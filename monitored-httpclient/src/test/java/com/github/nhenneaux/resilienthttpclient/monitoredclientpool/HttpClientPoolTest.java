@@ -12,20 +12,10 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfigura
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.awaitility.core.ConditionFactory;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
@@ -33,42 +23,18 @@ import java.net.http.HttpResponse;
 import java.security.KeyStore;
 import java.security.Security;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.stringContainsInOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @SuppressWarnings("resource") // HttpClient and ExecutorService not closeable on Java 17
 class HttpClientPoolTest {
@@ -241,6 +207,29 @@ class HttpClientPoolTest {
     void check() {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+            try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+                waitOneMinute(hostname)
+                        .until(
+                                httpClientPool::check,
+                                checkResult -> NOT_ERROR.contains(checkResult.getStatus())
+
+                        );
+            }
+        }
+    }
+
+    @Test
+    void checkHttp() {
+        for (String hostname : PUBLIC_HOST_TO_TEST) {
+            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname,
+                    80,
+                    ServerConfiguration.DEFAULT_HEALTH_PATH,
+                    ServerConfiguration.DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS,
+                    ServerConfiguration.DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
+                    ServerConfiguration.DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
+                    ServerConfiguration.DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
+                    DEFAULT_REQUEST_TRANSFORMER,
+                    "http");
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
                 waitOneMinute(hostname)
                         .until(
