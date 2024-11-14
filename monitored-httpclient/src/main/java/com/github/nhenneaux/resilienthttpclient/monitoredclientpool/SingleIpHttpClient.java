@@ -126,7 +126,7 @@ public class SingleIpHttpClient implements AutoCloseable {
                     .thenApply(HttpResponse::statusCode)
                     .join();
 
-            LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
+            LOGGER.log(Level.DEBUG, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
 
             healthy.set(isSuccessCode(statusCode));
             refreshFailureCountWithStatusCode(statusCode);
