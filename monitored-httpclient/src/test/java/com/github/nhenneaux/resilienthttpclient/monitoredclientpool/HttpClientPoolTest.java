@@ -74,7 +74,7 @@ import static org.mockito.Mockito.when;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
             //,"travis-ci.com","google.com" failing on Java22
     );
 
@@ -203,7 +203,7 @@ class HttpClientPoolTest {
 
     @Test
     void shouldReturnToString() {
-        var hostname = "nicolas.henneaux.io";
+        var hostname = "openjdk.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration)
                 .withScheduledExecutorService(Executors.newScheduledThreadPool(4))
@@ -211,13 +211,13 @@ class HttpClientPoolTest {
         ) {
             waitOneMinute(hostname).until(() -> httpClientPool.getNextHttpClient().isPresent());
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='nicolas.henneaux.io', hostAddress=", ", healthUri=https://", ", healthy=true}"));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='openjdk.org', hostAddress=", ", healthUri=https://", ", healthy=true}"));
 
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress=nicolas.henneaux.io"),
+                    allOf(containsString("SingleIpHttpClient{inetAddress=openjdk.org"),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
-                            containsString("serverConfiguration=ServerConfiguration{hostname='nicolas.henneaux.io', port=-1, healthPath=''"),
-                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}")));
+                            containsString("serverConfiguration=ServerConfiguration{hostname='openjdk.org', port=-1, healthPath=''"),
+                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1, protocol= https}}")));
         }
     }
 
@@ -233,7 +233,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1, protocol= https}}", httpClientPool.toString());
 
     }
 
@@ -268,7 +268,9 @@ class HttpClientPoolTest {
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
                     );
-            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"", "\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"129.159.253.6\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}", "]}"));
+            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"",
+                    "\",\"details\":[{\"hostname\":\"openjdk.org\",\"hostAddress\":\"",
+                    "\",\"healthUri\":\"https://openjdk.org\",\"healthy\":true}", "]}"));
         }
     }
 
@@ -682,7 +684,7 @@ class HttpClientPoolTest {
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
         final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), () -> "Not throwing for addresses " + addresses);
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://nicolas.henneaux.io GET", httpConnectTimeoutException.getMessage());
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://openjdk.org GET", httpConnectTimeoutException.getMessage());
 
     }
 
@@ -772,6 +774,7 @@ class HttpClientPoolTest {
         when(serverConfigurationMock.getPort()).thenReturn(serverConfiguration.getPort());
         when(serverConfigurationMock.getHealthReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getHealthReadTimeoutInMilliseconds());
         when(serverConfigurationMock.getRequestTransformer()).thenReturn(serverConfiguration.getRequestTransformer());
+        when(serverConfigurationMock.getProtocol()).thenReturn("https");
 
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfigurationMock)) {
             await().pollDelay(10, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
