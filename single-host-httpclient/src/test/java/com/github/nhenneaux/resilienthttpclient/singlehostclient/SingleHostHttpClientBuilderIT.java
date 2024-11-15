@@ -110,7 +110,7 @@ class SingleHostHttpClientBuilderIT {
     @Test
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
         // Given
-        final var hostname =PUBLIC_HOST_TO_TEST.get(0);
+        final var hostname =PUBLIC_HOST_TO_TEST.get(1);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
