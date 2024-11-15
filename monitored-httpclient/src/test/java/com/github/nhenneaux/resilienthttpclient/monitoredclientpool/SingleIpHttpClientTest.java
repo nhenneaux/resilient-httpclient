@@ -90,7 +90,7 @@ class SingleIpHttpClientTest {
         when(httpResponse.statusCode()).thenReturn(500);
         when(httpClient.sendAsync(captor.capture(), any(DISCARDING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
 
-        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, DEFAULT_REQUEST_TRANSFORMER, "https");
+        ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, DEFAULT_REQUEST_TRANSFORMER);
 
         // When
         try (final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), serverConfiguration)) {
@@ -140,7 +140,7 @@ class SingleIpHttpClientTest {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
         // When - Then
-        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER, "https");
+        ServerConfiguration serverConfiguration = new ServerConfiguration("com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh", -234, "&dfsfsd", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER);
         InetAddress localHost = InetAddress.getLocalHost();
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, localHost, serverConfiguration));
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
@@ -193,7 +193,7 @@ class SingleIpHttpClientTest {
             final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, inetAddress);
 
             // When
-            singleIpHttpClient = new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, givenRequestTransformer, "https"));
+            singleIpHttpClient = new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(hostname, 443, "/", 1, 1, -1, 1, givenRequestTransformer));
 
             // Then
             assertSame(httpClient, singleIpHttpClient.getHttpClient());
