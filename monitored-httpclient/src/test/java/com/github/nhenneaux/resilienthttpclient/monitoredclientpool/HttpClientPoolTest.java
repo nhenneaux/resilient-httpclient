@@ -764,6 +764,7 @@ class HttpClientPoolTest {
     }
 
     @Test
+    @Timeout(120)
     void shouldNotStopListRefreshingInCaseOfRuntimeException() throws MalformedURLException, URISyntaxException {
         final ServerConfiguration serverConfigurationMock = mock(ServerConfiguration.class);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
