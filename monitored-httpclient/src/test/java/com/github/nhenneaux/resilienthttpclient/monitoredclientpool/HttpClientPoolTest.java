@@ -660,7 +660,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutEmptyElement() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(1);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(2);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -686,7 +686,7 @@ class HttpClientPoolTest {
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
         final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), () -> "Not throwing for addresses " + addresses);
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://nicolas.henneaux.io GET", httpConnectTimeoutException.getMessage());
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://" + hostname + " GET", httpConnectTimeoutException.getMessage());
 
     }
 
