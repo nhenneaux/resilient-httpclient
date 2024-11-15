@@ -268,7 +268,11 @@ class HttpClientPoolTest {
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
                     );
-            assertThat(objectMapper().writeValueAsString(result), stringContainsInOrder("{\"status\":\"", "\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"129.159.253.6\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}", "]}"));
+            assertThat(objectMapper().writeValueAsString(result),
+                    stringContainsInOrder("{\"status\":\"",
+                            "\",\"details\":[{\"hostname\":\"nicolas.henneaux.io\",\"hostAddress\":\"",
+                            "\",\"healthUri\":\"https://nicolas.henneaux.io\",\"healthy\":true}",
+                            "]}"));
         }
     }
 
