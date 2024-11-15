@@ -811,16 +811,17 @@ class HttpClientPoolTest {
     }
 
     @Test
+    @Timeout(65)
     void shouldUpdateToFailedCountForHealthChecksFailed() {
-        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(2), "en.wikipedia.org");
+        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(1), "en.wikipedia.org");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
                 await().pollDelay(1, TimeUnit.SECONDS)
                         .atMost(1, TimeUnit.MINUTES)
                         .until(httpClientPool::check, checkResult -> NOT_ERROR.contains(checkResult.getStatus()));
-                // ipv4 health checks have no failure, unlike ipv6
                 for (final SingleIpHttpClient singleIpHttpClient : httpClientPool.getHttpClientsCache().get().getList()) {
+                    assertTrue(singleIpHttpClient.isHealthy());
                     final int failedResponseCount = singleIpHttpClient.getFailedResponseCount();
 
                     assertThat("failedResponseCount", failedResponseCount, equalTo(0));
