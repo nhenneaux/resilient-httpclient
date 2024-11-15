@@ -50,7 +50,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(1);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
         final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
         // When
