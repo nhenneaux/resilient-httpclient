@@ -685,7 +685,9 @@ class HttpClientPoolTest {
         // Then
         final HttpClient httpClient = new ResilientClient(() -> roundRobinPool);
 
-        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()), () -> "Not throwing for addresses " + addresses);
+        final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class,
+                () -> httpClient.send(HttpRequest.newBuilder().uri(URI.create("https://" + hostname)).build(), HttpResponse.BodyHandlers.discarding()),
+                () -> "Not throwing for addresses " + addresses);
         assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP " + addresses + " to send the HTTP request https://" + hostname + " GET", httpConnectTimeoutException.getMessage());
 
     }
@@ -810,7 +812,7 @@ class HttpClientPoolTest {
 
     @Test
     void shouldUpdateToFailedCountForHealthChecksFailed() {
-        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(0), "en.wikipedia.org");
+        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(2), "en.wikipedia.org");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
@@ -821,11 +823,7 @@ class HttpClientPoolTest {
                 for (final SingleIpHttpClient singleIpHttpClient : httpClientPool.getHttpClientsCache().get().getList()) {
                     final int failedResponseCount = singleIpHttpClient.getFailedResponseCount();
 
-                    if (singleIpHttpClient.getInetAddress() instanceof Inet4Address) {
-                        assertThat("failedResponseCount", failedResponseCount, equalTo(0));
-                    } else {
-                        assertThat("failedResponseCount", failedResponseCount, greaterThan(0));
-                    }
+                    assertThat("failedResponseCount", failedResponseCount, equalTo(0));
                 }
             }
         }
