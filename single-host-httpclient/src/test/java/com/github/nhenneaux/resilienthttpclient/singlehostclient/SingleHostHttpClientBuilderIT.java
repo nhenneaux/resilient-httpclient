@@ -119,7 +119,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     private static String oneHostname() {
-        return PUBLIC_HOST_TO_TEST.get(2);
+        return PUBLIC_HOST_TO_TEST.get(0);
     }
 
 
