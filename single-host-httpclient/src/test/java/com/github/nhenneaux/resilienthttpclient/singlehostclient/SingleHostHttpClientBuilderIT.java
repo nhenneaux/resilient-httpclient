@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;

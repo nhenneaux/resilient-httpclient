@@ -4,6 +4,7 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;

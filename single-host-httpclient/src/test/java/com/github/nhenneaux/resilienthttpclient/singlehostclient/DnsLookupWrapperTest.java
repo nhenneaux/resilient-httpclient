@@ -1,6 +1,7 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

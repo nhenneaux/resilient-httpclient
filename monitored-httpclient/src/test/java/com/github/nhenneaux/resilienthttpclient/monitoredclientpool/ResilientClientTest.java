@@ -2,6 +2,7 @@ package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.ConnectException;
