@@ -380,7 +380,12 @@ class SingleHostHttpClientBuilderIT {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.", executionException.getMessage());
+        assertThat(
+                executionException.getMessage(),
+                Matchers.oneOf("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.",
+                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) No subject alternative DNS name matching no.http.server found."
+                        )
+        );
     }
 
     @Test @Timeout(61)
@@ -403,7 +408,12 @@ class SingleHostHttpClientBuilderIT {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", executionException.getMessage());
+        assertThat(
+                executionException.getMessage(),
+                Matchers.oneOf("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target",
+                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target"
+                )
+        );
     }
 
 
