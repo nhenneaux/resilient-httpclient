@@ -17,7 +17,7 @@ class SingleHostnameX509TrustManagerTest {
     static final String HOSTNAME = "SingleHostnameX509TrustManager.nhenneaux.github.com";
 
     @SuppressWarnings({"squid:S2699", "java:S2699"}) // Expect no exception
-    @Test
+    @Test @Timeout(61)
     void shouldMatchDnsWithoutSan() throws CertificateException, IOException {
         final X509Certificate cer = loadCertificateWithoutSan();
         SingleHostnameX509TrustManager.matchDNS(HOSTNAME, cer);
@@ -30,7 +30,7 @@ class SingleHostnameX509TrustManagerTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldNotMatchDnsWithoutSan() throws CertificateException, IOException {
         final X509Certificate cer = loadCertificateWithoutSan();
         final CertificateException certificateException = assertThrows(CertificateException.class, () -> SingleHostnameX509TrustManager.matchDNS("not.matching.github.com", cer));

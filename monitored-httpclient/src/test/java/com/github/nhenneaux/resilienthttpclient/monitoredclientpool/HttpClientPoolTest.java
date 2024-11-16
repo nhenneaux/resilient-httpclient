@@ -94,7 +94,7 @@ class HttpClientPoolTest {
         System.out.println(testClass.getSimpleName() + "::" + testMethod.getName() + " test has finished.");
     }
 
-    @Test
+    @Test @Timeout(61)
     void getNextHttpClient() throws MalformedURLException, URISyntaxException {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -118,7 +118,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void resilientClient() throws MalformedURLException, URISyntaxException {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
@@ -137,7 +137,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
         String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -167,7 +167,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
         String hostname = PUBLIC_HOST_TO_TEST.get(0);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -197,7 +197,7 @@ class HttpClientPoolTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldReturnToString() {
         var hostname = "nicolas.henneaux.io";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -217,7 +217,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void getNextHttpClientNotFound() {
         final String hostname = "not.found.host";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -233,7 +233,7 @@ class HttpClientPoolTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void check() {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -253,7 +253,7 @@ class HttpClientPoolTest {
                 .atMost(1, TimeUnit.MINUTES);
     }
 
-    @Test
+    @Test @Timeout(61)
     void checkInJson() throws JsonProcessingException {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
@@ -285,7 +285,7 @@ class HttpClientPoolTest {
     }
 
 
-    @Test
+    @Test @Timeout(61)
     void scheduleRefresh() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
@@ -310,7 +310,7 @@ class HttpClientPoolTest {
     }
 
 
-    @Test
+    @Test @Timeout(61)
     void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -356,7 +356,7 @@ class HttpClientPoolTest {
         when(dnsLookupWrapper.getInetAddressesByDnsLookUp(PUBLIC_HOST_TO_TEST.get(0))).thenReturn(Set.of(byName), of);
     }
 
-    @Test
+    @Test @Timeout(61)
     void updatePreviousListWhenNewLookupResult() throws UnknownHostException {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -403,7 +403,7 @@ class HttpClientPoolTest {
         return InetAddress.getByAddress(new byte[]{10, 0, 0, 127});
     }
 
-    @Test
+    @Test @Timeout(61)
     void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -425,7 +425,7 @@ class HttpClientPoolTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void warningHealthWhenOneHostDown() throws UnknownHostException {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -478,7 +478,7 @@ class HttpClientPoolTest {
         verify(scheduledDnsRefreshFuture).cancel(true);
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldUseDnsFailsafe() throws IOException, InterruptedException {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -735,28 +735,28 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void validatePropertyMinus1() {
         final String key = "validatePropertyMinus1";
         Security.setProperty(key, "-1");
         assertFalse(HttpClientPool.validateProperty(key, 10));
     }
 
-    @Test
+    @Test @Timeout(61)
     void validatePropertyLowerThanBound() {
         final String key = "validatePropertyLowerThanBound";
         Security.setProperty(key, "5");
         assertTrue(HttpClientPool.validateProperty(key, 10));
     }
 
-    @Test
+    @Test @Timeout(61)
     void validatePropertyEmpty() {
         final String key = "validatePropertyEmpty";
         Security.setProperty(key, "");
         assertTrue(HttpClientPool.validateProperty(key, 10));
     }
 
-    @Test
+    @Test @Timeout(61)
     void validatePropertyHigherThanBound() {
         final String key = "validatePropertyHigherThanBound";
         Security.setProperty(key, "11");
@@ -792,7 +792,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void readme() {
         HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
                 new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0)));
@@ -830,7 +830,7 @@ class HttpClientPoolTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";

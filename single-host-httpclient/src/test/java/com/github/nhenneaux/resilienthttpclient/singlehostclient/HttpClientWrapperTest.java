@@ -22,7 +22,7 @@ class HttpClientWrapperTest {
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", SingleIpHttpRequest.HOST_HEADER);
     }
 
-    @Test
+    @Test @Timeout(61)
     void send() throws IOException, InterruptedException {
         final HttpClient httpClient = mock(HttpClient.class);
 
@@ -36,7 +36,7 @@ class HttpClientWrapperTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void sendAsync() throws UnknownHostException {
         final HttpClient httpClient = mock(HttpClient.class);
         final String hostname = UUID.randomUUID().toString();
@@ -48,7 +48,7 @@ class HttpClientWrapperTest {
         verify(httpClient).sendAsync(new SingleIpHttpRequest(httpRequest, hostAddress, hostname), bodyHandler);
     }
 
-    @Test
+    @Test @Timeout(61)
     void testSendAsync() throws UnknownHostException {
         final HttpClient httpClient = mock(HttpClient.class);
 
@@ -65,7 +65,7 @@ class HttpClientWrapperTest {
     }
 
 
-    @Test
+    @Test @Timeout(61)
     void cookieHandler() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -74,7 +74,7 @@ class HttpClientWrapperTest {
         verify(httpClient).cookieHandler();
     }
 
-    @Test
+    @Test @Timeout(61)
     void connectTimeout() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -83,7 +83,7 @@ class HttpClientWrapperTest {
         verify(httpClient).connectTimeout();
     }
 
-    @Test
+    @Test @Timeout(61)
     void followRedirects() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -96,7 +96,7 @@ class HttpClientWrapperTest {
         return InetAddress.getLoopbackAddress();
     }
 
-    @Test
+    @Test @Timeout(61)
     void proxy() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -105,7 +105,7 @@ class HttpClientWrapperTest {
         verify(httpClient).proxy();
     }
 
-    @Test
+    @Test @Timeout(61)
     void sslContext() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -114,7 +114,7 @@ class HttpClientWrapperTest {
         verify(httpClient).sslContext();
     }
 
-    @Test
+    @Test @Timeout(61)
     void sslParameters() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -123,7 +123,7 @@ class HttpClientWrapperTest {
         verify(httpClient).sslParameters();
     }
 
-    @Test
+    @Test @Timeout(61)
     void authenticator() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -132,7 +132,7 @@ class HttpClientWrapperTest {
         verify(httpClient).authenticator();
     }
 
-    @Test
+    @Test @Timeout(61)
     void version() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -141,7 +141,7 @@ class HttpClientWrapperTest {
         verify(httpClient).version();
     }
 
-    @Test
+    @Test @Timeout(61)
     void executor() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();
@@ -151,7 +151,7 @@ class HttpClientWrapperTest {
     }
 
 
-    @Test
+    @Test @Timeout(61)
     void newWebSocketBuilder() {
         final HttpClient httpClient = mock(HttpClient.class);
         final InetAddress hostAddress = getAddress();

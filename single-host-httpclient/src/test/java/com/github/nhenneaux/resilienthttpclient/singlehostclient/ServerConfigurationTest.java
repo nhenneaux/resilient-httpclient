@@ -7,7 +7,7 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerCo
 
 class ServerConfigurationTest {
 
-    @Test
+    @Test @Timeout(61)
     void shouldProperlyReturnDefaultValues() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration("hostname");
@@ -22,7 +22,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(-1, serverConfiguration.getFailureResponseCountThreshold());
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldProperlyReturnDefaultValuesWithPort() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration("hostname", 1234);
@@ -37,7 +37,7 @@ class ServerConfigurationTest {
         Assertions.assertEquals(-1, serverConfiguration.getFailureResponseCountThreshold());
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldProperlyReturnConfiguredValues() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration(

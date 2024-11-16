@@ -47,7 +47,7 @@ class SingleIpHttpClientTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldBeHealthyWithOneRefresh() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(1);
@@ -62,7 +62,7 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldBeUnHealthyWith500Status() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -80,7 +80,7 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldBeRefreshed() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -101,7 +101,7 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldBeUnHealthyWith100Status() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -120,7 +120,7 @@ class SingleIpHttpClientTest {
     }
 
 
-    @Test
+    @Test @Timeout(61)
     void shouldBeUnhealthyWithInvalidAddress() throws UnknownHostException {
         // Given
         // When
@@ -135,7 +135,7 @@ class SingleIpHttpClientTest {
 
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldFailOnMalformedUrl() throws UnknownHostException {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
@@ -146,7 +146,7 @@ class SingleIpHttpClientTest {
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldCallCheckHealthStatusIfHealthyIsFalse() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
@@ -163,7 +163,7 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test
+    @Test @Timeout(61)
     void shouldntCallCheckHealthStatusIfHealthyIsTrue() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(0);
