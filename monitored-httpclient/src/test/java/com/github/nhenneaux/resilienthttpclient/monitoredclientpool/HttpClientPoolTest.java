@@ -139,7 +139,7 @@ class HttpClientPoolTest {
 
     @Test @Timeout(61)
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
-        String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
@@ -169,7 +169,7 @@ class HttpClientPoolTest {
 
     @Test @Timeout(61)
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
-        String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
@@ -255,7 +255,7 @@ class HttpClientPoolTest {
 
     @Test @Timeout(61)
     void checkInJson() throws JsonProcessingException {
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(oneHostname());
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
             final HealthCheckResult result = await()
                     .pollDelay(1, TimeUnit.SECONDS)
@@ -288,7 +288,7 @@ class HttpClientPoolTest {
     @Test @Timeout(61)
     void scheduleRefresh() {
         // Given
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(oneHostname());
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledFuture = mock(ScheduledFuture.class);
         when(scheduledExecutorService.scheduleAtFixedRate(any(Runnable.class), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(serverConfiguration.getDnsLookupRefreshPeriodInSeconds()), eq(TimeUnit.SECONDS))).thenAnswer(invocationOnMock -> {
@@ -313,7 +313,7 @@ class HttpClientPoolTest {
     @Test @Timeout(61)
     void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -353,13 +353,13 @@ class HttpClientPoolTest {
 
     @SuppressWarnings("unchecked")
     private void mockDns(DnsLookupWrapper dnsLookupWrapper, InetAddress byName, Set<InetAddress> of) {
-        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(PUBLIC_HOST_TO_TEST.get(0))).thenReturn(Set.of(byName), of);
+        when(dnsLookupWrapper.getInetAddressesByDnsLookUp(oneHostname())).thenReturn(Set.of(byName), of);
     }
 
     @Test @Timeout(61)
     void updatePreviousListWhenNewLookupResult() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -406,7 +406,7 @@ class HttpClientPoolTest {
     @Test @Timeout(61)
     void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -428,7 +428,7 @@ class HttpClientPoolTest {
     @Test @Timeout(61)
     void warningHealthWhenOneHostDown() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
         final ScheduledFuture<?> scheduledDnsRefreshFuture = mock(ScheduledFuture.class);
@@ -481,7 +481,7 @@ class HttpClientPoolTest {
     @Test @Timeout(61)
     void shouldUseDnsFailsafe() throws IOException, InterruptedException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -514,7 +514,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldUseDnsFailsafeAsync() throws IOException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -570,7 +570,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeout() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -591,7 +591,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutSync() throws UnknownHostException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -706,7 +706,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldUseDnsFailsafeAsyncWithPushPromise() throws IOException {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         final ScheduledExecutorService scheduledExecutorService = mockScheduledExecutorService(serverConfiguration);
 
@@ -767,8 +767,9 @@ class HttpClientPoolTest {
     @Timeout(120)
     void shouldNotStopListRefreshingInCaseOfRuntimeException() throws MalformedURLException, URISyntaxException {
         final ServerConfiguration serverConfigurationMock = mock(ServerConfiguration.class);
-        final ServerConfiguration serverConfiguration = new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0));
-        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx", PUBLIC_HOST_TO_TEST.get(0));
+        String hostname = oneHostname();
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        when(serverConfigurationMock.getHostname()).thenReturn("fake.hostname.xxx", hostname);
         when(serverConfigurationMock.getDnsLookupRefreshPeriodInSeconds()).thenReturn(1L);
         when(serverConfigurationMock.getConnectionHealthCheckPeriodInSeconds()).thenReturn(serverConfiguration.getConnectionHealthCheckPeriodInSeconds());
         when(serverConfigurationMock.getHealthPath()).thenReturn(serverConfiguration.getHealthPath());
@@ -792,10 +793,14 @@ class HttpClientPoolTest {
         }
     }
 
+    private static String oneHostname() {
+        return PUBLIC_HOST_TO_TEST.get(2);
+    }
+
     @Test @Timeout(61)
     void readme() {
         HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
-                new ServerConfiguration(PUBLIC_HOST_TO_TEST.get(0)));
+                new ServerConfiguration(oneHostname()));
         HttpClient resilientClient = singleInstanceByHost.resilientClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://openjdk.org/"))
