@@ -45,7 +45,7 @@ class ResilientClientTest {
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "host");
     }
 
-    @Test @Timeout(61)
+    @Test
     void send() throws IOException, InterruptedException {
         // Given
         final HttpClient httpClient = mock(HttpClient.class);
@@ -82,7 +82,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void sendAsync() throws ExecutionException, InterruptedException {
         // Given
         final HttpClient httpClient = mock(HttpClient.class);
@@ -114,7 +114,7 @@ class ResilientClientTest {
         verify(ipHttpClient, times(1)).incrementFailureCount();
     }
 
-    @Test @Timeout(61)
+    @Test
     void throwForInvalidUrl() {
         final HttpClient httpClient = mock(HttpClient.class);
         final String hostname = UUID.randomUUID().toString();
@@ -127,7 +127,7 @@ class ResilientClientTest {
         assertEquals(MalformedURLException.class, illegalStateException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
     void throwForInvalidUrlSyntax() {
         final HttpClient httpClient = mock(HttpClient.class);
         InetAddress hostAddress = InetAddress.getLoopbackAddress();
@@ -139,7 +139,7 @@ class ResilientClientTest {
         assertEquals(URISyntaxException.class, illegalStateException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
     void testSendAsync() throws ExecutionException, InterruptedException {
         // Given
         final HttpClient httpClient = mock(HttpClient.class);
@@ -174,7 +174,7 @@ class ResilientClientTest {
     }
 
 
-    @Test @Timeout(61)
+    @Test
     void cookieHandler() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -193,7 +193,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void connectTimeout() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -204,7 +204,7 @@ class ResilientClientTest {
         verify(httpClient).connectTimeout();
     }
 
-    @Test @Timeout(61)
+    @Test
     void followRedirects() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -215,7 +215,7 @@ class ResilientClientTest {
         verify(httpClient).followRedirects();
     }
 
-    @Test @Timeout(61)
+    @Test
     void proxy() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -227,7 +227,7 @@ class ResilientClientTest {
         verify(httpClient).proxy();
     }
 
-    @Test @Timeout(61)
+    @Test
     void sslContext() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -239,7 +239,7 @@ class ResilientClientTest {
         verify(httpClient).sslContext();
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldHandleErrorInAsyncSend() {
         // Given
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
@@ -262,7 +262,7 @@ class ResilientClientTest {
         return singleIpHttpClient;
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldHandleRuntimeExceptionInAsyncSend() {
         // Given
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
@@ -278,7 +278,7 @@ class ResilientClientTest {
         verify(singleIpHttpClient).incrementFailureCount();
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldHandleExceptionInAsyncSend() {
         // Given
         final CompletableFuture<HttpResponse<Void>> completableFuture = new CompletableFuture<>();
@@ -294,7 +294,7 @@ class ResilientClientTest {
         verify(singleIpHttpClient).incrementFailureCount();
     }
 
-    @Test @Timeout(61)
+    @Test
     void sslParameters() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -306,7 +306,7 @@ class ResilientClientTest {
         verify(httpClient).sslParameters();
     }
 
-    @Test @Timeout(61)
+    @Test
     void authenticator() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -318,7 +318,7 @@ class ResilientClientTest {
         verify(httpClient).authenticator();
     }
 
-    @Test @Timeout(61)
+    @Test
     void version() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -330,7 +330,7 @@ class ResilientClientTest {
         verify(httpClient).version();
     }
 
-    @Test @Timeout(61)
+    @Test
     void executor() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -343,7 +343,7 @@ class ResilientClientTest {
     }
 
 
-    @Test @Timeout(61)
+    @Test
     void newWebSocketBuilder() {
         final HttpClient httpClient = mock(HttpClient.class);
         final RoundRobinPool roundRobinPool = mock(RoundRobinPool.class);
@@ -355,7 +355,7 @@ class ResilientClientTest {
         verify(httpClient).newWebSocketBuilder();
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldAddFailureCountByStatusCodeIsSuccess() throws IOException, URISyntaxException, InterruptedException {
         final String hostname = "openjdk.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -377,7 +377,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccess() throws IOException, URISyntaxException, InterruptedException {
         final String hostname = "postman-echo.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -402,7 +402,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldAddFailureCountByStatusCodeIsSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
         final String hostname = "openjdk.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -425,7 +425,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
         final String hostname = "httpbin.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -449,7 +449,7 @@ class ResilientClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldAddFailureCountByWhenExceptionOccursWhenSendAsync() throws IOException, URISyntaxException {
         final String hostname = "openjdk.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);

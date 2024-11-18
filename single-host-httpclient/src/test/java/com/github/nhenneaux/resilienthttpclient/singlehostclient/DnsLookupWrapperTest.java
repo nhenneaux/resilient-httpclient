@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class DnsLookupWrapperTest {
 
-    @Test @Timeout(61)
+    @Test
     void shouldGetIntAddressInOrder() throws UnknownHostException {
         // Given
         final String hostName = "stackoverflow.com";

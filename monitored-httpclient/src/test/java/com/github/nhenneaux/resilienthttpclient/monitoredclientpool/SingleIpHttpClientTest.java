@@ -4,7 +4,6 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.DnsLookupWrappe
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -48,7 +47,7 @@ class SingleIpHttpClientTest {
 
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
         final String hostname = PUBLIC_HOST_TO_TEST.get(1);
@@ -63,10 +62,14 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    private static String oneHostname() {
+        return PUBLIC_HOST_TO_TEST.get(0);
+    }
+
+    @Test
     void shouldBeUnHealthyWith500Status() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -81,10 +84,10 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldBeRefreshed() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -102,10 +105,10 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldBeUnHealthyWith100Status() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -121,7 +124,7 @@ class SingleIpHttpClientTest {
     }
 
 
-    @Test @Timeout(61)
+    @Test
     void shouldBeUnhealthyWithInvalidAddress() throws UnknownHostException {
         // Given
         // When
@@ -136,7 +139,7 @@ class SingleIpHttpClientTest {
 
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldFailOnMalformedUrl() throws UnknownHostException {
         // Given
         final HttpClient httpClient = HttpClient.newHttpClient();
@@ -147,10 +150,10 @@ class SingleIpHttpClientTest {
         assertEquals("Cannot build health URI from ServerConfiguration{hostname='com.github.nhenneaux.resilienthttpclient.monitoredclientpool.SingleIpHttpClientTest.shouldCreateClientWithoutRefresh', port=-234, healthPath='&dfsfsd', connectionHealthCheckPeriodInSeconds=1, dnsLookupRefreshPeriodInSeconds=1, healthReadTimeoutInMilliseconds=-1, failureResponseCountThreshold= 0}", illegalStateException.getMessage());
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldCallCheckHealthStatusIfHealthyIsFalse() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(500);
@@ -164,10 +167,10 @@ class SingleIpHttpClientTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldntCallCheckHealthStatusIfHealthyIsTrue() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(200);

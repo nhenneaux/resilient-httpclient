@@ -70,7 +70,8 @@ import static org.mockito.Mockito.when;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
+            "nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
             //,"travis-ci.com","google.com" failing on Java22
     );
 
@@ -837,7 +838,7 @@ class HttpClientPoolTest {
     @Test
     @Timeout(65)
     void shouldUpdateToFailedCountForHealthChecksFailed() {
-        final List<String> hosts = List.of(PUBLIC_HOST_TO_TEST.get(1), "en.wikipedia.org");
+        final List<String> hosts = List.of(oneHostname(), "en.wikipedia.org");
         for (String hostname : hosts) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
             try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {

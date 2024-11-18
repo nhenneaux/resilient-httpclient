@@ -39,17 +39,19 @@ class SingleHostHttpClientBuilderIT {
             "google.com",
             "travis-ci.com",
             "en.wikipedia.org");
+
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", SingleIpHttpRequest.HOST_HEADER);
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
         // Given
         for (String hostname : PUBLIC_HOST_TO_TEST) {
-            System.out.println("Validate "+hostname);
+            System.out.println("Validate " + hostname);
             final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
             final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
@@ -70,7 +72,8 @@ class SingleHostHttpClientBuilderIT {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort() throws URISyntaxException {
         // Given
 
@@ -95,7 +98,8 @@ class SingleHostHttpClientBuilderIT {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithHttpClientBuilder() {
         // Given
         final var hostname = oneHostname();
@@ -123,10 +127,11 @@ class SingleHostHttpClientBuilderIT {
     }
 
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
         // Given
-        final var hostname =PUBLIC_HOST_TO_TEST.get(1);
+        final var hostname = PUBLIC_HOST_TO_TEST.get(1);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
@@ -148,7 +153,8 @@ class SingleHostHttpClientBuilderIT {
         assertNotNull(response);
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() {
         // Given
         final var hostname = oneHostname();
@@ -172,7 +178,8 @@ class SingleHostHttpClientBuilderIT {
 
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTls() throws Exception {
         // Given
         final var hostname = "client.badssl.com";
@@ -205,7 +212,8 @@ class SingleHostHttpClientBuilderIT {
         assertNotNull(response);
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTlsCertMissing() throws Exception {
         // Given
         final var hostname = "client-cert-missing.badssl.com";
@@ -238,7 +246,8 @@ class SingleHostHttpClientBuilderIT {
         assertNotNull(response);
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldTestWithSni() {
         // Given
         // Domain is not working when sni is not working correctly
@@ -264,7 +273,8 @@ class SingleHostHttpClientBuilderIT {
     }
 
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldValidateWrongHost() {
         // Given
         String hostname = "wrong.host.badssl.com";
@@ -285,7 +295,8 @@ class SingleHostHttpClientBuilderIT {
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldValidateWith1000SAN() {
         // Given
         String hostname = "1000-sans.badssl.com";
@@ -306,7 +317,8 @@ class SingleHostHttpClientBuilderIT {
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldValidateNoSubject() {
         // Given
         String hostname = "no-subject.badssl.com";
@@ -327,7 +339,8 @@ class SingleHostHttpClientBuilderIT {
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldValidateNoCommonName() {
         // Given
         String hostname = "no-common-name.badssl.com";
@@ -347,7 +360,8 @@ class SingleHostHttpClientBuilderIT {
         assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void unknownHost() {
         // Given
         final String hostname = "notfound.unit";
@@ -360,7 +374,8 @@ class SingleHostHttpClientBuilderIT {
         assertEquals(UnknownHostException.class, illegalStateException.getCause().getClass());
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void unreachableAddress() throws UnknownHostException {
         final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("10.2.3.4"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(200))).withTlsNameMatching().withSni().build();
 
@@ -379,7 +394,8 @@ class SingleHostHttpClientBuilderIT {
         assertThat(executionException.getMessage(), Matchers.anyOf(Matchers.equalTo("java.net.http.HttpConnectTimeoutException: HTTP connect timed out"), Matchers.equalTo("java.net.ConnectException: Connection refused"), Matchers.equalTo("java.net.ConnectException: No route to host")));
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void noSubjectAlternativeName() throws UnknownHostException {
         final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("1.1.1.1"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5_000))).withTlsNameMatching().withSni().build();
 
@@ -399,11 +415,12 @@ class SingleHostHttpClientBuilderIT {
                 executionException.getMessage(),
                 Matchers.oneOf("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.",
                         "javax.net.ssl.SSLHandshakeException: (certificate_unknown) No subject alternative DNS name matching no.http.server found."
-                        )
+                )
         );
     }
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void noHttpsServer() {
         // Given
         String hostname = "http.badssl.com";
@@ -432,7 +449,8 @@ class SingleHostHttpClientBuilderIT {
     }
 
 
-    @Test @Timeout(61)
+    @Test
+    @Timeout(61)
     void shouldHandleNoSuchAlgorithm() {
         final NoSuchAlgorithmException noSuchAlgorithmException = new NoSuchAlgorithmException();
         final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleHostHttpClientBuilder.RethrowGeneralSecurityException.handleGeneralSecurityException(() -> {
