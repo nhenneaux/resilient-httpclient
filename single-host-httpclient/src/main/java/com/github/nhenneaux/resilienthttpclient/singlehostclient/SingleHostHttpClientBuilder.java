@@ -50,7 +50,8 @@ public class SingleHostHttpClientBuilder {
      * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
      */
     public static HttpClient newHttpClient(String hostname, InetAddress hostAddress) {
-        return builder(hostname, hostAddress, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+        return builder(hostname, hostAddress, HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(2L)))
                 .withTlsNameMatching()
                 .withSni()
                 .buildWithHostHeader();
