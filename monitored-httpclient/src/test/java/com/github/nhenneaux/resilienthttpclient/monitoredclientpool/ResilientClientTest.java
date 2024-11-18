@@ -122,6 +122,7 @@ class ResilientClientTest {
         when(serverConfiguration.getHostname()).thenReturn(hostname);
         when(serverConfiguration.getHealthPath()).thenReturn(UUID.randomUUID().toString());
         when(serverConfiguration.getPort()).thenReturn(-10);
+        when(serverConfiguration.getProtocol()).thenReturn("https");
         final IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () -> new SingleIpHttpClient(httpClient, hostAddress, serverConfiguration));
         assertEquals(MalformedURLException.class, illegalStateException.getCause().getClass());
     }
