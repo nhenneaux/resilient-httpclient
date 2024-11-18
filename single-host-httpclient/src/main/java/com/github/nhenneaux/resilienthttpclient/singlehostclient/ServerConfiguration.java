@@ -1,7 +1,7 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import java.net.http.HttpRequest;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -15,7 +15,7 @@ public class ServerConfiguration {
     public static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
     public static final String DEFAULT_PROTOCOL = "https";
-    public static final List<String> SUPPORTED_PROTOCOLS = List.of("http", "https");
+    public static final Set<String> SUPPORTED_PROTOCOLS = Set.of("http", "https");
 
     private final String hostname;
     private final int port;
