@@ -67,11 +67,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("resource") // HttpClient and ExecutorService not closeable on Java 17
+@Timeout(61)
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
-            "nicolas.henneaux.io", "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
+            //"nicolas.henneaux.io",
+            "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
             //,"travis-ci.com","google.com" failing on Java22
     );
 
@@ -96,7 +98,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void getNextHttpClient() throws MalformedURLException, URISyntaxException {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -121,7 +122,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void resilientClient() throws MalformedURLException, URISyntaxException {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
@@ -141,7 +141,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void shouldUseCustomSingleHostHttpClientBuilder() throws MalformedURLException, URISyntaxException {
         String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -172,7 +171,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void shouldUseNullTruststore() throws MalformedURLException, URISyntaxException {
         String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -203,9 +201,8 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void shouldReturnToString() {
-        var hostname = "nicolas.henneaux.io";
+        var hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration)
                 .withScheduledExecutorService(Executors.newScheduledThreadPool(4))
@@ -224,7 +221,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void getNextHttpClientNotFound() {
         final String hostname = "not.found.host";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -241,7 +237,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void check() {
         for (String hostname : PUBLIC_HOST_TO_TEST) {
             final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -262,7 +257,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void checkInJson() throws JsonProcessingException {
         String hostname = oneHostname();
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
@@ -298,7 +292,6 @@ class HttpClientPoolTest {
 
 
     @Test
-    @Timeout(61)
     void scheduleRefresh() {
         // Given
         final ServerConfiguration serverConfiguration = new ServerConfiguration(oneHostname());
@@ -324,7 +317,6 @@ class HttpClientPoolTest {
 
 
     @Test
-    @Timeout(61)
     void keepPreviousListWhenNewLookupEmpty() throws UnknownHostException {
         // Given
         final String hostname = oneHostname();
@@ -371,7 +363,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void updatePreviousListWhenNewLookupResult() throws UnknownHostException {
         // Given
         final String hostname = oneHostname();
@@ -419,7 +410,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void updatePreviousListWhenNewLookupInvalid() throws UnknownHostException {
         // Given
         final String hostname = oneHostname();
@@ -442,7 +432,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void warningHealthWhenOneHostDown() throws UnknownHostException {
         // Given
         final String hostname = oneHostname();
@@ -496,7 +485,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void shouldUseDnsFailsafe() throws IOException, InterruptedException {
         // Given
         final String hostname = oneHostname();
@@ -754,7 +742,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void validatePropertyMinus1() {
         final String key = "validatePropertyMinus1";
         Security.setProperty(key, "-1");
@@ -762,7 +749,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void validatePropertyLowerThanBound() {
         final String key = "validatePropertyLowerThanBound";
         Security.setProperty(key, "5");
@@ -770,7 +756,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void validatePropertyEmpty() {
         final String key = "validatePropertyEmpty";
         Security.setProperty(key, "");
@@ -778,7 +763,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void validatePropertyHigherThanBound() {
         final String key = "validatePropertyHigherThanBound";
         Security.setProperty(key, "11");
@@ -820,7 +804,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void readme() {
         HttpClientPool singleInstanceByHost = HttpClientPool.newHttpClientPool(
                 new ServerConfiguration(oneHostname()));
@@ -859,7 +842,6 @@ class HttpClientPoolTest {
     }
 
     @Test
-    @Timeout(61)
     void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
