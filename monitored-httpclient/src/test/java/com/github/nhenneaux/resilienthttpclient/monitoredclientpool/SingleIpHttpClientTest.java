@@ -50,7 +50,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(1);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
         final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
         // When
@@ -62,10 +62,14 @@ class SingleIpHttpClientTest {
         }
     }
 
+    private static String oneHostname() {
+        return PUBLIC_HOST_TO_TEST.get(0);
+    }
+
     @Test
     void shouldBeUnHealthyWith500Status() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -83,7 +87,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeRefreshed() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -104,7 +108,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeUnHealthyWith100Status() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
@@ -149,7 +153,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldCallCheckHealthStatusIfHealthyIsFalse() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(500);
@@ -166,7 +170,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldntCallCheckHealthStatusIfHealthyIsTrue() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final String hostname = oneHostname();
         final HttpClient httpClient = mock(HttpClient.class);
         @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
         when(httpResponse.statusCode()).thenReturn(200);

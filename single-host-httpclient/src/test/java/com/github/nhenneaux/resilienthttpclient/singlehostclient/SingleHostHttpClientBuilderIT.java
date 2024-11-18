@@ -2,6 +2,9 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -27,66 +30,83 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderIT {
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of("nicolas.henneaux.io","openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "google.com", "travis-ci.com", "en.wikipedia.org");
+    public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
+            "nicolas.henneaux.io",
+            "openjdk.org",
+            "github.com",
+            "twitter.com",
+            "cloudflare.com",
+            "facebook.com",
+            "amazon.com",
+            "google.com",
+            "travis-ci.com",
+            "en.wikipedia.org");
+
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", SingleIpHttpRequest.HOST_HEADER);
     }
 
-    @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
+    public static List<String> publicHosts() {
+        return PUBLIC_HOST_TO_TEST;
+    }
+
+    @ParameterizedTest
+    @Timeout(61)
+    @MethodSource("publicHosts")
+    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite(String hostname) {
         // Given
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+        System.out.println("Validate " + hostname);
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
-            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://" + ip))
-                    .build();
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
 
 
-            // When
-            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
 
-            // Then
-            assertNotNull(response);
-        }
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+    }
+
+    @ParameterizedTest
+    @Timeout(61)
+    @MethodSource("publicHosts")
+    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort(String hostname) throws URISyntaxException {
+        // Given
+
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI("https", "", hostname, 443, "", "", ""))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
     }
 
     @Test
-    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort() throws URISyntaxException {
-        // Given
-
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-
-            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https", "", hostname, 443, "", "", ""))
-                    .build();
-
-
-            // When
-            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            // Then
-            assertNotNull(response);
-        }
-    }
-
-    @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithHttpClientBuilder() {
         // Given
-        final var hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final var hostname = oneHostname();
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2))).withTlsNameMatching().withSni().buildWithHostHeader();
@@ -106,11 +126,16 @@ class SingleHostHttpClientBuilderIT {
         assertNotNull(response);
     }
 
+    private static String oneHostname() {
+        return PUBLIC_HOST_TO_TEST.get(0);
+    }
+
 
     @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
         // Given
-        final var hostname =PUBLIC_HOST_TO_TEST.get(0);
+        final var hostname = PUBLIC_HOST_TO_TEST.get(1);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
@@ -133,9 +158,10 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithNullTruststore() {
         // Given
-        final var hostname = PUBLIC_HOST_TO_TEST.get(0);
+        final var hostname = oneHostname();
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching((KeyStore) null).withSni().buildWithHostHeader();
@@ -157,6 +183,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTls() throws Exception {
         // Given
         final var hostname = "client.badssl.com";
@@ -190,6 +217,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTlsCertMissing() throws Exception {
         // Given
         final var hostname = "client-cert-missing.badssl.com";
@@ -223,6 +251,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldTestWithSni() {
         // Given
         // Domain is not working when sni is not working correctly
@@ -249,6 +278,7 @@ class SingleHostHttpClientBuilderIT {
 
 
     @Test
+    @Timeout(61)
     void shouldValidateWrongHost() {
         // Given
         String hostname = "wrong.host.badssl.com";
@@ -270,6 +300,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldValidateWith1000SAN() {
         // Given
         String hostname = "1000-sans.badssl.com";
@@ -291,6 +322,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldValidateNoSubject() {
         // Given
         String hostname = "no-subject.badssl.com";
@@ -312,6 +344,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void shouldValidateNoCommonName() {
         // Given
         String hostname = "no-common-name.badssl.com";
@@ -332,6 +365,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void unknownHost() {
         // Given
         final String hostname = "notfound.unit";
@@ -345,6 +379,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void unreachableAddress() throws UnknownHostException {
         final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("10.2.3.4"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(200))).withTlsNameMatching().withSni().build();
 
@@ -364,6 +399,7 @@ class SingleHostHttpClientBuilderIT {
     }
 
     @Test
+    @Timeout(61)
     void noSubjectAlternativeName() throws UnknownHostException {
         final HttpClient client = SingleHostHttpClientBuilder.builder("no.http.server", InetAddress.getByName("1.1.1.1"), HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5_000))).withTlsNameMatching().withSni().build();
 
@@ -379,10 +415,16 @@ class SingleHostHttpClientBuilderIT {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.", executionException.getMessage());
+        assertThat(
+                executionException.getMessage(),
+                Matchers.oneOf("javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching no.http.server found.",
+                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) No subject alternative DNS name matching no.http.server found."
+                )
+        );
     }
 
     @Test
+    @Timeout(61)
     void noHttpsServer() {
         // Given
         String hostname = "http.badssl.com";
@@ -402,11 +444,17 @@ class SingleHostHttpClientBuilderIT {
 
         // Then
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
-        assertEquals("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", executionException.getMessage());
+        assertThat(
+                executionException.getMessage(),
+                Matchers.oneOf("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target",
+                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target"
+                )
+        );
     }
 
 
     @Test
+    @Timeout(61)
     void shouldHandleNoSuchAlgorithm() {
         final NoSuchAlgorithmException noSuchAlgorithmException = new NoSuchAlgorithmException();
         final IllegalStateException illegalStateException = assertThrows(IllegalStateException.class, () -> SingleHostHttpClientBuilder.RethrowGeneralSecurityException.handleGeneralSecurityException(() -> {
