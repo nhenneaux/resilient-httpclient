@@ -210,12 +210,12 @@ class HttpClientPoolTest {
         ) {
             waitOneMinute(hostname).until(() -> httpClientPool.getNextHttpClient().isPresent());
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='nicolas.henneaux.io', hostAddress=", ", healthUri=https://", ", healthy=true}"));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='"+hostname+"', hostAddress=", ", healthUri=https://", ", healthy=true}"));
 
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress=nicolas.henneaux.io"),
+                    allOf(containsString("SingleIpHttpClient{inetAddress="+hostname),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
-                            containsString("serverConfiguration=ServerConfiguration{hostname='nicolas.henneaux.io', port=-1, healthPath=''"),
+                            containsString("serverConfiguration=ServerConfiguration{hostname='"+hostname+"', port=-1, healthPath=''"),
                             containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}")));
         }
     }
