@@ -12,11 +12,7 @@ import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfigura
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.SingleHostHttpClientBuilder;
 import org.awaitility.core.ConditionFactory;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -37,11 +33,7 @@ import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerCo
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -201,7 +193,7 @@ class HttpClientPoolTest {
                     allOf(containsString("SingleIpHttpClient{inetAddress=" + hostname),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
                             containsString("serverConfiguration=ServerConfiguration{hostname='" + hostname + "', port=-1, healthPath=''"),
-                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}")));
+                            containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1, protocol= https}}")));
         }
     }
 
@@ -217,7 +209,7 @@ class HttpClientPoolTest {
         assertEquals(List.of(), check.getDetails());
         assertEquals(HealthCheckResult.HealthStatus.ERROR, check.getStatus());
         assertEquals("HealthCheckResult{status=ERROR, details=[]}", check.toString());
-        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}", httpClientPool.toString());
+        assertEquals("HttpClientPool{httpClientsCache=null, serverConfiguration=ServerConfiguration{hostname='not.found.host', port=-1, healthPath='', connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1, protocol= https}}", httpClientPool.toString());
 
     }
 
@@ -232,8 +224,7 @@ class HttpClientPoolTest {
                             httpClientPool::check,
                             checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
-                        );
-            }
+                    );
         }
     }
 
@@ -255,9 +246,10 @@ class HttpClientPoolTest {
                                 httpClientPool::check,
                                 checkResult -> NOT_ERROR.contains(checkResult.getStatus())
 
-                    );
-        }
+                        );
+            }
 
+        }
     }
 
     private static ConditionFactory waitOneMinute(String hostname) {
@@ -622,7 +614,8 @@ class HttpClientPoolTest {
 
     }
 
-    private Set<InetAddress> mockForConnectTimeout(String hostname, ServerConfiguration serverConfiguration, RoundRobinPool roundRobinPool) throws UnknownHostException {
+    private Set<InetAddress> mockForConnectTimeout(String hostname, ServerConfiguration
+            serverConfiguration, RoundRobinPool roundRobinPool) throws UnknownHostException {
         final InetAddress nonRoutableAddress = InetAddress.getByName("10.255.255.1");
 
         final Optional<SingleIpHttpClient> firstSingleClient = createSingleClient(hostname, serverConfiguration, nonRoutableAddress);
@@ -703,7 +696,8 @@ class HttpClientPoolTest {
 
     }
 
-    private Optional<SingleIpHttpClient> createSingleClient(String hostname, ServerConfiguration serverConfiguration, InetAddress address) {
+    private Optional<SingleIpHttpClient> createSingleClient(String hostname, ServerConfiguration
+            serverConfiguration, InetAddress address) {
         final SingleIpHttpClient singleIpHttpClient = spy(new SingleIpHttpClient(
                 SingleHostHttpClientBuilder
                         .builder(hostname, address, HttpClient.newBuilder().connectTimeout(Duration.ofMillis(5L)))
@@ -791,6 +785,7 @@ class HttpClientPoolTest {
         when(serverConfigurationMock.getPort()).thenReturn(serverConfiguration.getPort());
         when(serverConfigurationMock.getHealthReadTimeoutInMilliseconds()).thenReturn(serverConfiguration.getHealthReadTimeoutInMilliseconds());
         when(serverConfigurationMock.getRequestTransformer()).thenReturn(serverConfiguration.getRequestTransformer());
+        when(serverConfigurationMock.getProtocol()).thenReturn(ServerConfiguration.DEFAULT_PROTOCOL);
 
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfigurationMock)) {
             await().pollDelay(10, TimeUnit.SECONDS).atMost(1, TimeUnit.MINUTES).until(() -> httpClientPool.getNextHttpClient().isPresent());
@@ -851,7 +846,8 @@ class HttpClientPoolTest {
     }
 
     @Test
-    void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws IOException, URISyntaxException, InterruptedException {
+    void shouldDecommissionIfCouldNotFulfillFailedResponseCountThresholdRequirement() throws
+            IOException, URISyntaxException, InterruptedException {
         // Given
         final String hostname = "postman-echo.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, -1, "", 1, 1, -1, 0, DEFAULT_REQUEST_TRANSFORMER);
