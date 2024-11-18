@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ServerConfigurationTest {
 
@@ -21,6 +23,23 @@ class ServerConfigurationTest {
         Assertions.assertEquals(5000, serverConfiguration.getHealthReadTimeoutInMilliseconds());
         Assertions.assertEquals(-1, serverConfiguration.getFailureResponseCountThreshold());
         Assertions.assertEquals("https", serverConfiguration.getProtocol());
+    }
+
+    @Test
+    void testUnsupportedProtocol() {
+        IllegalArgumentException illegalStateException = assertThrows(IllegalArgumentException.class, () ->
+                new ServerConfiguration(
+                        "hostname",
+                        1234,
+                        "/health",
+                        444L,
+                        555L,
+                        111L,
+                        0,
+                        DEFAULT_REQUEST_TRANSFORMER,
+                        "abc"
+                ));
+        assertEquals("Supported protocols are [http, https], but was: abc", illegalStateException.getMessage());
     }
 
     @Test

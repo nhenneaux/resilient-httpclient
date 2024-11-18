@@ -15,7 +15,7 @@ public class ServerConfiguration {
     public static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
     public static final String DEFAULT_PROTOCOL = "https";
-    public static final List<String> PROTOCOLS = List.of("http", "https");
+    public static final List<String> SUPPORTED_PROTOCOLS = List.of("http", "https");
 
     private final String hostname;
     private final int port;
@@ -90,8 +90,8 @@ public class ServerConfiguration {
         this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
         this.requestTransformer = requestTransformer;
-        if (protocol == null || !PROTOCOLS.contains(protocol)) {
-            throw new IllegalArgumentException("Protocol should be https or http, but was: " + protocol);
+        if (protocol == null || !SUPPORTED_PROTOCOLS.contains(protocol)) {
+            throw new IllegalArgumentException("Supported protocols are " + SUPPORTED_PROTOCOLS + ", but was: " + protocol);
         }
         this.protocol = protocol;
     }
