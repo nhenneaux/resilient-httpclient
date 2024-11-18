@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -74,13 +76,17 @@ class HttpClientPoolTest {
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
             //"nicolas.henneaux.io",
             "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
-            //,"travis-ci.com","google.com" failing on Java22
+            // , "travis-ci.com", "google.com" //failing on Java22
     );
 
     static {
         // Force properties
         System.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", "Host");
+    }
+
+    public static List<String> publicHosts() {
+        return PUBLIC_HOST_TO_TEST;
     }
 
     @BeforeEach
@@ -97,46 +103,47 @@ class HttpClientPoolTest {
         System.out.println(testClass.getSimpleName() + "::" + testMethod.getName() + " test has finished.");
     }
 
-    @Test
-    void getNextHttpClient() throws MalformedURLException, URISyntaxException {
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
-                waitOneMinute(hostname)
-                        .until(httpClientPool::getNextHttpClient, Optional::isPresent);
+    public
+    @ParameterizedTest
+    @MethodSource("publicHosts")
+    void getNextHttpClient(String hostname) throws MalformedURLException, URISyntaxException {
 
-                final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
-                final HttpClient httpClient;
-                try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
-                    httpClient = singleIpHttpClient.getHttpClient();
-                }
-                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                        .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
-                                        .build(),
-                                HttpResponse.BodyHandlers.ofString())
-                        .thenApply(HttpResponse::statusCode)
-                        .join();
-                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
+            waitOneMinute(hostname)
+                    .until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            final HttpClient httpClient;
+            try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
+                httpClient = singleIpHttpClient.getHttpClient();
             }
+            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::statusCode)
+                    .join();
+            assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
+
     }
 
-    @Test
-    void resilientClient() throws MalformedURLException, URISyntaxException {
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
-            try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
-                waitOneMinute(hostname).until(httpClientPool::getNextHttpClient, Optional::isPresent);
+    @ParameterizedTest
+    @MethodSource("publicHosts")
+    void resilientClient(String hostname) throws MalformedURLException, URISyntaxException {
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname, 443);
+        try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
+            waitOneMinute(hostname).until(httpClientPool::getNextHttpClient, Optional::isPresent);
 
-                final HttpClient httpClient = httpClientPool.resilientClient();
-                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                        .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
-                                        .build(),
-                                HttpResponse.BodyHandlers.ofString())
-                        .thenApply(HttpResponse::statusCode)
-                        .join();
-                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
-            }
+            final HttpClient httpClient = httpClientPool.resilientClient();
+            final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                    .uri(new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI())
+                                    .build(),
+                            HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::statusCode)
+                    .join();
+            assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
     }
 
@@ -210,12 +217,12 @@ class HttpClientPoolTest {
         ) {
             waitOneMinute(hostname).until(() -> httpClientPool.getNextHttpClient().isPresent());
             assertFalse(httpClientPool.getNextHttpClient().isEmpty());
-            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='"+hostname+"', hostAddress=", ", healthUri=https://", ", healthy=true}"));
+            assertThat(httpClientPool.check().getDetails().toString(), stringContainsInOrder("[ConnectionDetail{hostname='" + hostname + "', hostAddress=", ", healthUri=https://", ", healthy=true}"));
 
             assertThat(httpClientPool.toString(),
-                    allOf(containsString("SingleIpHttpClient{inetAddress="+hostname),
+                    allOf(containsString("SingleIpHttpClient{inetAddress=" + hostname),
                             containsString("HttpClientPool{httpClientsCache=GenericRoundRobinListWithHealthCheck{list=["),
-                            containsString("serverConfiguration=ServerConfiguration{hostname='"+hostname+"', port=-1, healthPath=''"),
+                            containsString("serverConfiguration=ServerConfiguration{hostname='" + hostname + "', port=-1, healthPath=''"),
                             containsString("connectionHealthCheckPeriodInSeconds=30, dnsLookupRefreshPeriodInSeconds=300, healthReadTimeoutInMilliseconds=5000, failureResponseCountThreshold= -1}}")));
         }
     }
@@ -236,19 +243,20 @@ class HttpClientPoolTest {
 
     }
 
-    @Test
-    void check() {
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
-            try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
-                waitOneMinute(hostname)
-                        .until(
-                                httpClientPool::check,
-                                checkResult -> NOT_ERROR.contains(checkResult.getStatus())
+    @ParameterizedTest
+    @MethodSource("publicHosts")
+    void check(String hostname) {
 
-                        );
-            }
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+            waitOneMinute(hostname)
+                    .until(
+                            httpClientPool::check,
+                            checkResult -> NOT_ERROR.contains(checkResult.getStatus())
+
+                    );
         }
+
     }
 
     private static ConditionFactory waitOneMinute(String hostname) {

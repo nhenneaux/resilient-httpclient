@@ -3,6 +3,8 @@ package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
@@ -46,56 +48,58 @@ class SingleHostHttpClientBuilderIT {
         System.setProperty("jdk.httpclient.allowRestrictedHeaders", SingleIpHttpRequest.HOST_HEADER);
     }
 
-    @Test
-    @Timeout(61)
-    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite() {
-        // Given
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            System.out.println("Validate " + hostname);
-            final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-
-            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://" + ip))
-                    .build();
-
-
-            // When
-            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
-
-            // Then
-            assertNotNull(response);
-        }
+    public static List<String> publicHosts() {
+        return PUBLIC_HOST_TO_TEST;
     }
 
-    @Test
+    @ParameterizedTest
     @Timeout(61)
-    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort() throws URISyntaxException {
+    @MethodSource("publicHosts")
+    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsite(String hostname) {
+        // Given
+        System.out.println("Validate " + hostname);
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+    }
+
+    @ParameterizedTest
+    @Timeout(61)
+    @MethodSource("publicHosts")
+    void shouldBuildSingleIpHttpClientAndWorksWithPublicWebsiteWithPort(String hostname) throws URISyntaxException {
         // Given
 
-        for (String hostname : PUBLIC_HOST_TO_TEST) {
-            final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
-            final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https", "", hostname, 443, "", "", ""))
-                    .build();
+        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
 
 
-            // When
-            final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
-                    .join();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI("https", "", hostname, 443, "", "", ""))
+                .build();
 
-            // Then
-            assertNotNull(response);
-        }
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
     }
 
     @Test
