@@ -627,7 +627,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutDuplicateAddressList() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(3);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(2);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -662,7 +662,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutEmptyElement() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(3);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(2);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
