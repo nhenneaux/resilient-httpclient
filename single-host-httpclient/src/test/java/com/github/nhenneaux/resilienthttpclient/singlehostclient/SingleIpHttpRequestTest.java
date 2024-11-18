@@ -1,7 +1,6 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -16,8 +15,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class SingleIpHttpRequestTest {
 

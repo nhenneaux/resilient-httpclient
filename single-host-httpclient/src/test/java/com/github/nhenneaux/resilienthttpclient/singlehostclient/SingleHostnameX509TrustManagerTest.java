@@ -1,7 +1,6 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +17,7 @@ class SingleHostnameX509TrustManagerTest {
     static final String HOSTNAME = "SingleHostnameX509TrustManager.nhenneaux.github.com";
 
     @SuppressWarnings({"squid:S2699", "java:S2699"}) // Expect no exception
-    @Test @Timeout(61)
+    @Test
     void shouldMatchDnsWithoutSan() throws CertificateException, IOException {
         final X509Certificate cer = loadCertificateWithoutSan();
         SingleHostnameX509TrustManager.matchDNS(HOSTNAME, cer);
@@ -31,7 +30,7 @@ class SingleHostnameX509TrustManagerTest {
         }
     }
 
-    @Test @Timeout(61)
+    @Test
     void shouldNotMatchDnsWithoutSan() throws CertificateException, IOException {
         final X509Certificate cer = loadCertificateWithoutSan();
         final CertificateException certificateException = assertThrows(CertificateException.class, () -> SingleHostnameX509TrustManager.matchDNS("not.matching.github.com", cer));
