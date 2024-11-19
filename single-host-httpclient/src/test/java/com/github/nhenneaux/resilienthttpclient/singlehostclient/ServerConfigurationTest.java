@@ -39,7 +39,7 @@ class ServerConfigurationTest {
                         DEFAULT_REQUEST_TRANSFORMER,
                         "abc"
                 ));
-        assertEquals("Supported protocols are [http, https], but was: abc", illegalStateException.getMessage());
+        assertEquals("Supported protocols are http or https, but was: abc", illegalStateException.getMessage());
     }
 
     @Test

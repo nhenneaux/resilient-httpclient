@@ -91,7 +91,7 @@ public class ServerConfiguration {
         this.failureResponseCountThreshold = failureResponseCountThreshold;
         this.requestTransformer = requestTransformer;
         if (protocol == null || !SUPPORTED_PROTOCOLS.contains(protocol)) {
-            throw new IllegalArgumentException("Supported protocols are " + SUPPORTED_PROTOCOLS + ", but was: " + protocol);
+            throw new IllegalArgumentException("Supported protocols are http or https, but was: " + protocol);
         }
         this.protocol = protocol;
     }
