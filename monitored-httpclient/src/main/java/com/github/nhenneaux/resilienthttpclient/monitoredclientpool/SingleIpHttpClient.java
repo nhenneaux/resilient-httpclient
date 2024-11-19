@@ -25,7 +25,7 @@ import static java.lang.System.Logger.Level;
 
 public class SingleIpHttpClient implements AutoCloseable {
 
-    private static final Logger LOGGER = System.getLogger(SingleIpHttpClient.class.getSimpleName());
+    private static final Logger LOGGER = System.getLogger(SingleIpHttpClient.class.getName());
 
     private final HttpClient httpClient;
     private final InetAddress inetAddress;
@@ -90,7 +90,7 @@ public class SingleIpHttpClient implements AutoCloseable {
 
     private URI healthUri(ServerConfiguration serverConfiguration) {
         try {
-            return new URL("https", serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
+            return new URL(serverConfiguration.getProtocol(), serverConfiguration.getHostname(), serverConfiguration.getPort(), serverConfiguration.getHealthPath()).toURI();
         } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalArgumentException("Cannot build health URI from " + serverConfiguration, e);
         }
@@ -126,7 +126,7 @@ public class SingleIpHttpClient implements AutoCloseable {
                     .thenApply(HttpResponse::statusCode)
                     .join();
 
-            LOGGER.log(Level.INFO, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
+            LOGGER.log(Level.DEBUG, () -> "Checked health for URI " + healthUri + ", status is `" + statusCode + "`" + timingLogStatement(start));
 
             healthy.set(isSuccessCode(statusCode));
             refreshFailureCountWithStatusCode(statusCode);

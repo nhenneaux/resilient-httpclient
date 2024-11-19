@@ -1,18 +1,21 @@
 package com.github.nhenneaux.resilienthttpclient.singlehostclient;
 
 import java.net.http.HttpRequest;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public class ServerConfiguration {
 
-    private static final int DEFAULT_PORT = -1;
-    private static final String DEFAULT_HEALTH_PATH = "";
-    private static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
-    private static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
-    private static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
-    private static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
+    public static final int DEFAULT_PORT = -1;
+    public static final String DEFAULT_HEALTH_PATH = "";
+    public static final long DEFAULT_DNS_LOOKUP_REFRESH_PERIOD_IN_SECONDS = TimeUnit.MINUTES.toSeconds(5);
+    public static final long DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS = 30;
+    public static final long DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(5);
+    public static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
+    public static final String DEFAULT_PROTOCOL = "https";
+    public static final Set<String> SUPPORTED_PROTOCOLS = Set.of("http", "https");
 
     private final String hostname;
     private final int port;
@@ -22,6 +25,7 @@ public class ServerConfiguration {
     private final long healthReadTimeoutInMilliseconds;
     private final int failureResponseCountThreshold;
     private final Consumer<HttpRequest.Builder> requestTransformer;
+    private final String protocol;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -32,7 +36,8 @@ public class ServerConfiguration {
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
-                DEFAULT_REQUEST_TRANSFORMER
+                DEFAULT_REQUEST_TRANSFORMER,
+                DEFAULT_PROTOCOL
         );
     }
 
@@ -46,7 +51,8 @@ public class ServerConfiguration {
                 DEFAULT_CONNECTION_HEALTH_CHECK_PERIOD_IN_SECONDS,
                 DEFAULT_HEALTH_READ_TIMEOUT_IN_MILLISECONDS,
                 DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD,
-                DEFAULT_REQUEST_TRANSFORMER
+                DEFAULT_REQUEST_TRANSFORMER,
+                DEFAULT_PROTOCOL
         );
     }
 
@@ -61,6 +67,21 @@ public class ServerConfiguration {
             int failureResponseCountThreshold,
             Consumer<HttpRequest.Builder> requestTransformer
     ) {
+        this(hostname, port, healthPath, dnsLookupRefreshPeriodInSeconds, connectionHealthCheckPeriodInSeconds, healthReadTimeoutInMilliseconds, failureResponseCountThreshold, requestTransformer, DEFAULT_PROTOCOL);
+    }
+
+    @SuppressWarnings("java:S107")// All parameters are needed
+    public ServerConfiguration(
+            String hostname,
+            int port,
+            String healthPath,
+            long dnsLookupRefreshPeriodInSeconds,
+            long connectionHealthCheckPeriodInSeconds,
+            long healthReadTimeoutInMilliseconds,
+            int failureResponseCountThreshold,
+            Consumer<HttpRequest.Builder> requestTransformer,
+            String protocol
+    ) {
         this.hostname = hostname;
         this.port = port;
         this.healthPath = healthPath;
@@ -69,6 +90,10 @@ public class ServerConfiguration {
         this.healthReadTimeoutInMilliseconds = healthReadTimeoutInMilliseconds;
         this.failureResponseCountThreshold = failureResponseCountThreshold;
         this.requestTransformer = requestTransformer;
+        if (protocol == null || !SUPPORTED_PROTOCOLS.contains(protocol)) {
+            throw new IllegalArgumentException("Supported protocols are http or https, but was: " + protocol);
+        }
+        this.protocol = protocol;
     }
 
     /**
@@ -126,16 +151,24 @@ public class ServerConfiguration {
         return requestTransformer;
     }
 
+    /**
+     * The protocol to be used in requests: http or https
+     */
+    public String getProtocol() {
+        return protocol;
+    }
+
     @Override
     public String toString() {
         return "ServerConfiguration{" +
-               "hostname='" + hostname + '\'' +
-               ", port=" + port +
-               ", healthPath='" + healthPath + '\'' +
-               ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
-               ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
-               ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
-               ", failureResponseCountThreshold= " + failureResponseCountThreshold +
-               '}';
+                "hostname='" + hostname + '\'' +
+                ", port=" + port +
+                ", healthPath='" + healthPath + '\'' +
+                ", connectionHealthCheckPeriodInSeconds=" + connectionHealthCheckPeriodInSeconds +
+                ", dnsLookupRefreshPeriodInSeconds=" + dnsLookupRefreshPeriodInSeconds +
+                ", healthReadTimeoutInMilliseconds=" + healthReadTimeoutInMilliseconds +
+                ", failureResponseCountThreshold= " + failureResponseCountThreshold +
+                ", protocol= " + protocol +
+                '}';
     }
 }

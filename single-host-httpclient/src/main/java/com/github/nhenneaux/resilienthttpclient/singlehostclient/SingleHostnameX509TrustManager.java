@@ -18,7 +18,7 @@ import static java.lang.System.Logger.Level;
 import static java.util.stream.Collectors.joining;
 
 public class SingleHostnameX509TrustManager implements X509TrustManager {
-    private static final Logger LOGGER = System.getLogger(SingleHostnameX509TrustManager.class.getSimpleName());
+    private static final Logger LOGGER = System.getLogger(SingleHostnameX509TrustManager.class.getName());
     // constants for subject alt names of type DNS and IP
     private static final int ALTNAME_DNS = 2;
 
