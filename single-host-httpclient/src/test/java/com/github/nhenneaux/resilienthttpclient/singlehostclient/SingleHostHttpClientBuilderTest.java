@@ -314,33 +314,15 @@ class SingleHostHttpClientBuilderTest {
     }
 
 
-    @Test
-    @Timeout(61)
-    void shouldValidateWrongHost() {
-        // Given
-        String hostname = "wrong.host.badssl.com";
-        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-
-        final HttpClient client = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
-
-        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
-
-        // When
-        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
-        // Then
-        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+    public static List<String> hostValidateCertificates() {
+        return List.of("wrong.host.badssl.com", "1000-sans.badssl.com", "no-subject.badssl.com", "no-common-name.badssl.com");
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("hostValidateCertificates")
     @Timeout(61)
-    void shouldValidateWith1000SAN() {
+    void shouldValidateCertificate(String hostname) {
         // Given
-        String hostname = "1000-sans.badssl.com";
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
@@ -350,49 +332,6 @@ class SingleHostHttpClientBuilderTest {
                 .uri(URI.create("https://" + ip))
                 .build();
 
-        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
-
-        // When
-        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
-        // Then
-        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
-    }
-
-    @Test
-    @Timeout(61)
-    void shouldValidateNoSubject() {
-        // Given
-        String hostname = "no-subject.badssl.com";
-        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
-
-        final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
-
-        // When
-        final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
-        // Then
-        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
-    }
-
-    @Test
-    @Timeout(61)
-    void shouldValidateNoCommonName() {
-        // Given
-        String hostname = "no-common-name.badssl.com";
-        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
-
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L))).withTlsNameMatching().buildWithHostHeader();
-
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://" + ip))
-                .build();
         final CompletableFuture<String> stringCompletableFuture = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
 
         // When

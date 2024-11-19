@@ -89,7 +89,7 @@ class HttpClientPoolTest {
 
     @ParameterizedTest
     @MethodSource("publicHosts")
-    void getNextHttpClient(String hostname) throws MalformedURLException, URISyntaxException {
+    void getNextHttpClient(String hostname) throws URISyntaxException {
 
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
@@ -102,7 +102,7 @@ class HttpClientPoolTest {
                 httpClient = singleIpHttpClient.getHttpClient();
             }
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .uri(getUri(hostname, serverConfiguration))
                                     .build(),
                             HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
@@ -116,7 +116,7 @@ class HttpClientPoolTest {
 
     @Disabled("fails on Java 22/23")
     @MethodSource("publicSpecificHosts")
-    void specificPublicEndpoints(String hostname) throws MalformedURLException, URISyntaxException {
+    void specificPublicEndpoints(String hostname) throws URISyntaxException {
 
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
@@ -130,7 +130,7 @@ class HttpClientPoolTest {
                 System.out.println("Calling " + hostname + " " + singleIpHttpClient.getInetAddress() + " healthiness " + singleIpHttpClient.getHealthy());
 
                 final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                        .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                        .uri(getUri(hostname, serverConfiguration))
                                         .build(),
                                 HttpResponse.BodyHandlers.discarding())
                         .thenApply(HttpResponse::statusCode)
@@ -139,6 +139,10 @@ class HttpClientPoolTest {
             }
         }
 
+    }
+
+    private static URI getUri(String hostname, ServerConfiguration serverConfiguration) throws URISyntaxException {
+        return new URI("https", hostname, serverConfiguration.getHealthPath(),null);
     }
 
     @ParameterizedTest
