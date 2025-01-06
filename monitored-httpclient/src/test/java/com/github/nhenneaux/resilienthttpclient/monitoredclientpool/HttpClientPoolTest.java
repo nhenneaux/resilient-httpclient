@@ -44,9 +44,18 @@ class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
-            //"nicolas.henneaux.io",
-            "openjdk.org", "github.com", "twitter.com", "cloudflare.com", "facebook.com", "amazon.com", "en.wikipedia.org"
-            // , "travis-ci.com", "google.com" //failing on Java22
+            "openjdk.org",
+            "github.com",
+            "twitter.com",
+            "cloudflare.com",
+            "facebook.com",
+            "amazon.com",
+            "en.wikipedia.org"
+    );
+    public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
+            "nicolas.henneaux.io", //failing on Java23
+            "travis-ci.com", //failing on Java22
+            "google.com" //failing on Java22
     );
 
     static {
@@ -57,6 +66,10 @@ class HttpClientPoolTest {
 
     public static List<String> publicHosts() {
         return PUBLIC_HOST_TO_TEST;
+    }
+
+    public static List<String> publicSpecificHosts() {
+        return PUBLIC_HOST_TO_TEST_WITH_SNI;
     }
 
     @BeforeEach
@@ -73,10 +86,10 @@ class HttpClientPoolTest {
         System.out.println(testClass.getSimpleName() + "::" + testMethod.getName() + " test has finished.");
     }
 
-    public
+
     @ParameterizedTest
     @MethodSource("publicHosts")
-    void getNextHttpClient(String hostname) throws MalformedURLException, URISyntaxException {
+    void getNextHttpClient(String hostname) throws URISyntaxException {
 
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
@@ -89,7 +102,7 @@ class HttpClientPoolTest {
                 httpClient = singleIpHttpClient.getHttpClient();
             }
             final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
-                                    .uri(new URL("https", hostname, -1, serverConfiguration.getHealthPath()).toURI())
+                                    .uri(getUri(hostname, serverConfiguration))
                                     .build(),
                             HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::statusCode)
@@ -97,6 +110,42 @@ class HttpClientPoolTest {
             assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
         }
 
+    }
+
+    @ParameterizedTest
+    @Timeout(60L)
+    @MethodSource("publicSpecificHosts")
+    void specificPublicEndpoints(String hostname) throws URISyntaxException {
+        if (List.of(22, 23).contains(Runtime.version().feature())) {
+            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
+            return;
+        }
+
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
+            waitOneMinute(hostname)
+                    .until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
+
+                final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+                System.out.println("Calling " + hostname + " " + singleIpHttpClient.getInetAddress() + " healthiness " + singleIpHttpClient.getHealthy());
+
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                        .uri(getUri(hostname, serverConfiguration))
+                                        .build(),
+                                HttpResponse.BodyHandlers.discarding())
+                        .thenApply(HttpResponse::statusCode)
+                        .join();
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
+        }
+
+    }
+
+    private static URI getUri(String hostname, ServerConfiguration serverConfiguration) throws URISyntaxException {
+        return new URI("https", hostname, serverConfiguration.getHealthPath(),null);
     }
 
     @ParameterizedTest
@@ -254,6 +303,7 @@ class HttpClientPoolTest {
 
     private static ConditionFactory waitOneMinute(String hostname) {
         return await("waiting " + hostname + " being available")
+                .pollDelay(1, TimeUnit.SECONDS)
                 .atMost(1, TimeUnit.MINUTES);
     }
 
