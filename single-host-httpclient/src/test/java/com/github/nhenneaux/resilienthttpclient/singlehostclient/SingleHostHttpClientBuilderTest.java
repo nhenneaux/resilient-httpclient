@@ -87,7 +87,7 @@ class SingleHostHttpClientBuilderTest {
     @Timeout(61)
     @MethodSource("publicSpecificHosts")
     void shouldBuildSingleIpHttpClientAndWorksWithSpecificPublicWebsite(String hostname) {
-        if (List.of(22, 23).contains(Runtime.version().feature())) {
+        if (jdk8346705VersionImpacted()) {
             // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
             return;
         }
@@ -110,6 +110,10 @@ class SingleHostHttpClientBuilderTest {
 
         // Then
         assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+    }
+
+    private static boolean jdk8346705VersionImpacted() {
+        return List.of(22, 23, 24).contains(Runtime.version().feature());
     }
 
     @ParameterizedTest
@@ -220,7 +224,7 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTls() throws Exception {
-        if (List.of(22, 23).contains(Runtime.version().feature())) {
+        if (jdk8346705VersionImpacted()) {
             // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
            return;
         }
@@ -258,7 +262,7 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTlsCertMissing() throws Exception {
-        if (List.of(22, 23).contains(Runtime.version().feature())) {
+        if (jdk8346705VersionImpacted()) {
             // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
             return;
         }
@@ -296,7 +300,7 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldTestWithSni() {
-        if (List.of(22, 23).contains(Runtime.version().feature())) {
+        if (jdk8346705VersionImpacted()) {
             // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
             return;
         }

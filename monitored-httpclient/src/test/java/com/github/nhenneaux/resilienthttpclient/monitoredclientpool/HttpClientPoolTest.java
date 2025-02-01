@@ -116,8 +116,8 @@ class HttpClientPoolTest {
     @Timeout(60L)
     @MethodSource("publicSpecificHosts")
     void specificPublicEndpoints(String hostname) throws URISyntaxException {
-        if (List.of(22, 23).contains(Runtime.version().feature())) {
-            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
+        if (List.of(22, 23, 24).contains(Runtime.version().feature())) {
+            // Failing in Java 22-24, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
             return;
         }
 

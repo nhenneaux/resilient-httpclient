@@ -20,6 +20,10 @@
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
 
         <skipRelease>true</skipRelease>
+        <hamcrest.version>3.0</hamcrest.version>
+        <junit-jupiter.version>5.11.4</junit-jupiter.version>
+        <awaitility.version>4.2.2</awaitility.version>
+        <mockito-junit-jupiter.version>5.15.2</mockito-junit-jupiter.version>
     </properties>
     <modules>
         <module>single-host-httpclient</module>
@@ -29,25 +33,25 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.11.4</version>
+            <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.2.2</version>
+            <version>${awaitility.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.15.2</version>
+            <version>${mockito-junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
-            <version>3.0</version>
+            <version>${hamcrest.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -159,7 +163,6 @@
                 </configuration>
             </plugin>
         </plugins>
-
 
         <pluginManagement>
             <plugins>
