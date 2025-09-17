@@ -116,11 +116,6 @@ class HttpClientPoolTest {
     @Timeout(60L)
     @MethodSource("publicSpecificHosts")
     void specificPublicEndpoints(String hostname) throws URISyntaxException {
-        if (List.of(22, 23, 24).contains(Runtime.version().feature())) {
-            // Failing in Java 22-24, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
-            return;
-        }
-
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool.newHttpClientPool(serverConfiguration)) {
             waitOneMinute(hostname)
@@ -679,7 +674,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutDuplicateAddressList() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(2);
+        final String hostname = PUBLIC_HOST_TO_TEST.get(3);
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 

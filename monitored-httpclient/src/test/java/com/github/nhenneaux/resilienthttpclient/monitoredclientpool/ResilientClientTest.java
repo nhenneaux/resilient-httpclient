@@ -427,7 +427,7 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
-        final String hostname = "httpbin.org";
+        final String hostname = "mock.httpstatus.io";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
@@ -435,7 +435,7 @@ class ResilientClientTest {
                     .resilientClient()
                     .sendAsync(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .uri(new URL("https", hostname, -1, "/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()

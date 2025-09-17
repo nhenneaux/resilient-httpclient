@@ -21,9 +21,9 @@
 
         <skipRelease>true</skipRelease>
         <hamcrest.version>3.0</hamcrest.version>
-        <junit-jupiter.version>5.11.4</junit-jupiter.version>
-        <awaitility.version>4.2.2</awaitility.version>
-        <mockito-junit-jupiter.version>5.15.2</mockito-junit-jupiter.version>
+        <junit-jupiter.version>5.13.4</junit-jupiter.version>
+        <awaitility.version>4.3.0</awaitility.version>
+        <mockito-junit-jupiter.version>5.19.0</mockito-junit-jupiter.version>
     </properties>
     <modules>
         <module>single-host-httpclient</module>
@@ -57,7 +57,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.18.2</version>
+            <version>2.20.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -169,7 +169,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.12</version>
+                    <version>0.8.13</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-gpg-plugin</artifactId>

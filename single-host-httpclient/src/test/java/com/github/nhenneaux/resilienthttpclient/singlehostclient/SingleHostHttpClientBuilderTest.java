@@ -87,10 +87,6 @@ class SingleHostHttpClientBuilderTest {
     @Timeout(61)
     @MethodSource("publicSpecificHosts")
     void shouldBuildSingleIpHttpClientAndWorksWithSpecificPublicWebsite(String hostname) {
-        if (jdk8346705VersionImpacted()) {
-            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
-            return;
-        }
         // Given
         System.out.println("Validate " + hostname);
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
@@ -112,9 +108,7 @@ class SingleHostHttpClientBuilderTest {
         assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
     }
 
-    private static boolean jdk8346705VersionImpacted() {
-        return List.of(22, 23, 24).contains(Runtime.version().feature());
-    }
+
 
     @ParameterizedTest
     @Timeout(61)
@@ -224,10 +218,6 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTls() throws Exception {
-        if (jdk8346705VersionImpacted()) {
-            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
-           return;
-        }
         // Given
         final var hostname = "client.badssl.com";
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
@@ -262,10 +252,6 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldBuildSingleIpHttpClientWithMutualTlsCertMissing() throws Exception {
-        if (jdk8346705VersionImpacted()) {
-            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
-            return;
-        }
         // Given
         final var hostname = "client-cert-missing.badssl.com";
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
@@ -300,10 +286,6 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldTestWithSni() {
-        if (jdk8346705VersionImpacted()) {
-            // Failing in Java 22-23, regression in JDK https://bugs.openjdk.org/browse/JDK-8346705
-            return;
-        }
         // Given
         // Domain is not working when sni is not working correctly
         final var hostname = "24max.de";
