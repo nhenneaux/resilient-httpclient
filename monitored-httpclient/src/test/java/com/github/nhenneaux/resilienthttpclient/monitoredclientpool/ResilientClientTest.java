@@ -435,7 +435,7 @@ class ResilientClientTest {
                     .resilientClient()
                     .sendAsync(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("http", hostname, -1, "/status/500").toURI())
+                                    .uri(new URL("https", hostname, -1, "/status/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()
