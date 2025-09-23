@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.PUBLIC_HOST_TO_TEST;
+import static com.github.nhenneaux.resilienthttpclient.monitoredclientpool.HttpClientPoolTest.AMAZON_COM;
 import static com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration.DEFAULT_REQUEST_TRANSFORMER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -50,7 +50,7 @@ class SingleIpHttpClientTest {
     @Test
     void shouldBeHealthyWithOneRefresh() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(1);
+        final String hostname = AMAZON_COM;
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
         final HttpClient httpClient = SingleHostHttpClientBuilder.newHttpClient(hostname, ip);
         // When
@@ -63,7 +63,7 @@ class SingleIpHttpClientTest {
     }
 
     private static String oneHostname() {
-        return PUBLIC_HOST_TO_TEST.get(0);
+        return AMAZON_COM;
     }
 
     @Test

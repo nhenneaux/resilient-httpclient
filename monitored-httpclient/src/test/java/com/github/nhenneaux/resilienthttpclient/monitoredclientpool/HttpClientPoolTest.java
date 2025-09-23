@@ -43,19 +43,20 @@ import static org.mockito.Mockito.*;
 class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
+    public static final String AMAZON_COM = "amazon.com";
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
             "openjdk.org",
             "github.com",
             "twitter.com",
             "cloudflare.com",
             "facebook.com",
-            "amazon.com",
+            AMAZON_COM,
             "en.wikipedia.org"
     );
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
-            "nicolas.henneaux.io", //failing on Java23
-            "travis-ci.com", //failing on Java22
-            "google.com" //failing on Java22
+            "nicolas.henneaux.io",
+            "travis-ci.com",
+            "google.com"
     );
 
     static {
@@ -674,7 +675,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutDuplicateAddressList() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(3);
+        final String hostname = AMAZON_COM;
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -709,7 +710,7 @@ class HttpClientPoolTest {
     @Timeout(20)
     void shouldConnectTimeoutEmptyElement() {
         // Given
-        final String hostname = PUBLIC_HOST_TO_TEST.get(2);
+        final String hostname = AMAZON_COM;
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         mockScheduledExecutorService(serverConfiguration);
 
@@ -849,7 +850,7 @@ class HttpClientPoolTest {
     }
 
     private static String oneHostname() {
-        return PUBLIC_HOST_TO_TEST.get(0);
+        return AMAZON_COM;
     }
 
     @Test
