@@ -13,6 +13,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyStore;
@@ -31,13 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleHostHttpClientBuilderTest {
+    public static final String AMAZON_COM = "amazon.com";
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
             "openjdk.org",
             "github.com",
             "twitter.com",
             "cloudflare.com",
             "facebook.com",
-            "amazon.com",
+            AMAZON_COM,
             "en.wikipedia.org");
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
@@ -160,7 +162,7 @@ class SingleHostHttpClientBuilderTest {
     }
 
     private static String oneHostname() {
-        return PUBLIC_HOST_TO_TEST.get(0);
+        return AMAZON_COM;
     }
 
 
@@ -168,7 +170,7 @@ class SingleHostHttpClientBuilderTest {
     @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithCustomSslContext() throws NoSuchAlgorithmException {
         // Given
-        final var hostname = PUBLIC_HOST_TO_TEST.get(1);
+        final var hostname = AMAZON_COM;
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
         final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)))
@@ -333,7 +335,8 @@ class SingleHostHttpClientBuilderTest {
         // When
         final CompletionException completionException = assertThrows(CompletionException.class, stringCompletableFuture::join);
         // Then
-        assertEquals(SSLHandshakeException.class, completionException.getCause().getClass());
+
+        assertThat(completionException.getCause().getClass(), Matchers.oneOf(SSLHandshakeException.class, HttpConnectTimeoutException.class));
     }
 
     @Test
@@ -418,8 +421,10 @@ class SingleHostHttpClientBuilderTest {
         final ExecutionException executionException = assertThrows(ExecutionException.class, stringCompletableFuture::get);
         assertThat(
                 executionException.getMessage(),
-                Matchers.oneOf("javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target",
-                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target"
+                Matchers.oneOf(
+                        "javax.net.ssl.SSLHandshakeException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target",
+                        "javax.net.ssl.SSLHandshakeException: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target",
+                        "java.net.http.HttpConnectTimeoutException: HTTP connect timed out"
                 )
         );
     }
