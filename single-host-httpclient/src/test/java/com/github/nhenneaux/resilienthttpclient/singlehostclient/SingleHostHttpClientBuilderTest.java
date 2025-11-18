@@ -107,7 +107,7 @@ class SingleHostHttpClientBuilderTest {
                 .join();
 
         // Then
-        assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        assertThat("Unexpected error HTTP"+statusCode + " calling "+hostname,statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
     }
 
 
