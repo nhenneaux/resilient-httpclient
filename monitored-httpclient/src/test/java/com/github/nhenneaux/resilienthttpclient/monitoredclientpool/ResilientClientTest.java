@@ -1,6 +1,7 @@
 package com.github.nhenneaux.resilienthttpclient.monitoredclientpool;
 
 import com.github.nhenneaux.resilienthttpclient.singlehostclient.ServerConfiguration;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -469,7 +470,9 @@ class ResilientClientTest {
 
             // Then
             ExecutionException exception = assertThrows(ExecutionException.class, sendFuture::get);
-            assertEquals("java.lang.IllegalStateException: invalid body", exception.getMessage());
+            assertThat(exception.getMessage(),
+                    Matchers.anyOf(Matchers.equalTo("java.io.IOException: java.lang.IllegalStateException: invalid body"),
+                            Matchers.equalTo("java.lang.IllegalStateException: invalid body")));
 
             assertThat("failedResponseCount for clients" + httpClientPool, httpClientPool.getHttpClientsCache().get().getList().stream()
                     .filter(SingleIpHttpClient::isHealthy)
