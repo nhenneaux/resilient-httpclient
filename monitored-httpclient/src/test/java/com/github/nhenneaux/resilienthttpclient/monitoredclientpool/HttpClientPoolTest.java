@@ -44,10 +44,10 @@ class HttpClientPoolTest {
 
     private static final Set<HealthCheckResult.HealthStatus> NOT_ERROR = Set.of(HealthCheckResult.HealthStatus.OK, HealthCheckResult.HealthStatus.WARNING);
     public static final String AMAZON_COM = "amazon.com";
-    public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
+    private static final List<String> PUBLIC_HOST_TO_TEST = List.of(
             "openjdk.org",
             "github.com",
-            "twitter.com",
+            "bsky.app",
             "cloudflare.com",
             "facebook.com",
             AMAZON_COM,
@@ -55,6 +55,7 @@ class HttpClientPoolTest {
     );
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
+            "mastodon.online",
             "travis-ci.com",
             "google.com"
     );

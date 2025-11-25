@@ -36,13 +36,14 @@ class SingleHostHttpClientBuilderTest {
     public static final List<String> PUBLIC_HOST_TO_TEST = List.of(
             "openjdk.org",
             "github.com",
-            "twitter.com",
+            "bsky.app",
             "cloudflare.com",
             "facebook.com",
             AMAZON_COM,
             "en.wikipedia.org");
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
+            "mastodon.online",
             "google.com",
             "travis-ci.com");
 
