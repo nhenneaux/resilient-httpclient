@@ -57,7 +57,7 @@ class HttpClientPoolTest {
             "nicolas.henneaux.io",
             "mastodon.online",
             "microsoft.com",
-            "linkedin.com"
+            "www.linkedin.com"
     );
 
     static {
