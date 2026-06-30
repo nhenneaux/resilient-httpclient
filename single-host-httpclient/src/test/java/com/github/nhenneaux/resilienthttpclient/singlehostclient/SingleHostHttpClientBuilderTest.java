@@ -40,14 +40,14 @@ class SingleHostHttpClientBuilderTest {
             "cloudflare.com",
             "facebook.com",
             AMAZON_COM,
-            "en.wikipedia.org");
+            "en.wikipedia.org",
+            "google.com");
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
             "mastodon.online",
             "microsoft.com",
             "www.linkedin.com",
-            "travis-ci.com",
-            "google.com"
+            "travis-ci.com"
     );
 
     static {
