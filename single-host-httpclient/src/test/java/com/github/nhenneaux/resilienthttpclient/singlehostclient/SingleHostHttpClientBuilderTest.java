@@ -45,7 +45,8 @@ class SingleHostHttpClientBuilderTest {
             "nicolas.henneaux.io",
             "mastodon.online",
             "microsoft.com",
-            "linkedin.com");
+            "www.linkedin.com"
+    );
 
     static {
         // Force properties
