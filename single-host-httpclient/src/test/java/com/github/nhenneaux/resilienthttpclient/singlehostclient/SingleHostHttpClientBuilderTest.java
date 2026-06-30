@@ -235,7 +235,7 @@ class SingleHostHttpClientBuilderTest {
         char[] password = "badssl.com".toCharArray();
         keyStore.load(getClass().getResourceAsStream("/badssl.com-client.p12"), password);
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5L)))
                 .withTlsNameMatching(trustStore, keyStore, password)
                 .withSni()
                 .buildWithHostHeader();
