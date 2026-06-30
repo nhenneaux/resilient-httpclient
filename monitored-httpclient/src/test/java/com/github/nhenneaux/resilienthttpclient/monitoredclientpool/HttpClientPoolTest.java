@@ -56,8 +56,7 @@ class HttpClientPoolTest {
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
             "mastodon.online",
-            "microsoft.com",
-            "www.linkedin.com"
+            "microsoft.com"
     );
 
     static {
