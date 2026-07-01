@@ -49,12 +49,21 @@ public class SingleHostHttpClientBuilder {
      * It also provides the given hostname in SNI extension.
      * The returned java.net.http.HttpClient is wrapped to force the HTTP header <code>Host</code> with the given hostname.
      */
-    public static HttpClient newHttpClient(String hostname, InetAddress hostAddress) {
-        return builder(hostname, hostAddress, HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(2L)))
+    public static HttpClient newHttpClient(String hostname, InetAddress hostAddress, HttpClient.Version version) {
+        final HttpClient.Builder clientBuilder = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(2L));
+        final HttpClient.Builder clientBuilderWithVersion = Optional.ofNullable(version).map(clientBuilder::version).orElse(clientBuilder);
+        return builder(hostname, hostAddress, clientBuilderWithVersion)
                 .withTlsNameMatching()
                 .withSni()
                 .buildWithHostHeader();
+    }
+
+    /**
+     * @see SingleHostHttpClientBuilder#newHttpClient(String, InetAddress, HttpClient.Version)
+     */
+    public static HttpClient newHttpClient(String hostname, InetAddress hostAddress) {
+        return newHttpClient(hostname, hostAddress, null);
     }
 
     /**

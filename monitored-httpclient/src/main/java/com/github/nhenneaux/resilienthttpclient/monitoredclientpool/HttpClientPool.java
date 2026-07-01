@@ -66,7 +66,7 @@ public class HttpClientPool implements AutoCloseable {
         );
 
         // We invoke the same method here as in the scheduler. We don't want constructor to crush in case of a temporary issue.
-        // However for misconfiguration problems it will re-throw an exception and crush the constructor.
+        // However, for misconfiguration problems it will re-throw an exception and crush the constructor.
         refreshTheListWrappedInTryCatch(dnsLookupWrapper, serverConfiguration, httpClientsCache, singleHttpClientProvider, scheduledExecutorService);
     }
 

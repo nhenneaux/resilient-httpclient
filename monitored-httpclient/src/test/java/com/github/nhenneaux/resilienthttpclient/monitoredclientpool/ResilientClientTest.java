@@ -383,7 +383,7 @@ class ResilientClientTest {
         final String hostname = "mock.httpstatus.io";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
-        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
             HttpResponse httpResponse = httpClientPool
                     .resilientClient()
                     .send(
@@ -408,7 +408,7 @@ class ResilientClientTest {
         final String hostname = "openjdk.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
-        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).build()) {
+        try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
             httpClientPool
                     .resilientClient()
                     .sendAsync(
