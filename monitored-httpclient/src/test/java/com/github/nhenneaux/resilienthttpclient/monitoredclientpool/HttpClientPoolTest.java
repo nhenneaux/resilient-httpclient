@@ -115,6 +115,43 @@ class HttpClientPoolTest {
 
     }
 
+    @Test
+    @Timeout(60L)
+    void testConnectionToGoogleHttp3WhenSupported() throws URISyntaxException {
+        final String hostname = "google.com";
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (HttpClientPool httpClientPool = HttpClientPool
+                .builder(serverConfiguration)
+                .withSingleHostHttpClient(inetAddress ->
+                        SingleHostHttpClientBuilder
+                                .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder()
+                                        .connectTimeout(Duration.ofSeconds(2L)))
+                                .withSni()
+
+                                .build()
+                )
+                .build()) {
+            waitOneMinute(hostname)
+                    .until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
+
+                final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+                System.out.println("Calling " + hostname + " " + singleIpHttpClient.getInetAddress() + " healthiness " + singleIpHttpClient.getHealthy());
+
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                        .uri(getUri(hostname, serverConfiguration))
+                                        .build(),
+                                HttpResponse.BodyHandlers.discarding())
+                        .thenApply(HttpResponse::statusCode)
+                        .join();
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
+        }
+
+    }
+
     @ParameterizedTest
     @Timeout(60L)
     @MethodSource("publicSpecificHosts")
@@ -139,11 +176,10 @@ class HttpClientPoolTest {
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
         }
-
     }
 
     private static URI getUri(String hostname, ServerConfiguration serverConfiguration) throws URISyntaxException {
-        return new URI("https", hostname, serverConfiguration.getHealthPath(),null);
+        return new URI("https", hostname, serverConfiguration.getHealthPath(), null);
     }
 
     @ParameterizedTest
@@ -336,7 +372,7 @@ class HttpClientPoolTest {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
                 .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
-                .serializationInclusion(JsonInclude.Include.NON_NULL).build();
+                .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_NULL).build();
     }
 
 

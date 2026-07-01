@@ -88,6 +88,33 @@ class SingleHostHttpClientBuilderTest {
         assertNotNull(response);
     }
 
+    @Test
+    @Timeout(61)
+    void shouldBuildSingleIpHttpClientAndWorksWithGoogle() {
+        // Given
+        final String hostname = "google.com";
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip,HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(2L)))
+                .withSni()
+                .build();
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+    }
+
     @ParameterizedTest
     @Timeout(61)
     @MethodSource("publicSpecificHosts")
