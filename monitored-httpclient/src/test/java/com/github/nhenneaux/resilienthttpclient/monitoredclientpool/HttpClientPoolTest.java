@@ -15,7 +15,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.MethodSources;
 
 import java.io.IOException;
 import java.net.*;
@@ -132,7 +131,7 @@ class HttpClientPoolTest {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClient(_ ->
+                .withSingleHostHttpClient(unused ->
                         SingleHostHttpClientBuilder
                                 .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder()
                                         .connectTimeout(Duration.ofSeconds(2L)))
@@ -182,11 +181,7 @@ class HttpClientPoolTest {
                                         .uri(getUri(hostname, serverConfiguration))
                                         .build(),
                                 HttpResponse.BodyHandlers.discarding())
-
-                        .thenApply(stringHttpResponse -> {
-                            System.out.println(stringHttpResponse.version());
-                            return stringHttpResponse.statusCode();
-                        })
+                        .thenApply(HttpResponse::statusCode)
                         .join();
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
