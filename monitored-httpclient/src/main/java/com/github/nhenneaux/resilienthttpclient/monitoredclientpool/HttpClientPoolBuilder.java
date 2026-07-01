@@ -19,6 +19,7 @@ public class HttpClientPoolBuilder {
     private DnsLookupWrapper dnsLookupWrapper;
     private ScheduledExecutorService scheduledExecutorService;
     private Function<InetAddress, HttpClient> singleHostHttpClientFunction;
+    private HttpClient.Version version;
 
     HttpClientPoolBuilder(final ServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
@@ -50,6 +51,14 @@ public class HttpClientPoolBuilder {
         return this;
     }
 
+    /**
+     * Force the HTTP version in the client.
+     */
+    public HttpClientPoolBuilder withVersion(HttpClient.Version version) {
+        this.version = version;
+        return this;
+    }
+
     public HttpClientPoolBuilder withSingleHostHttpClient(final Function<InetAddress, HttpClient> singleHostHttpClientFunction) {
         this.singleHostHttpClientFunction = singleHostHttpClientFunction;
         return this;
@@ -65,7 +74,7 @@ public class HttpClientPoolBuilder {
         }
         final Function<InetAddress, HttpClient> singleHttpClientProvider;
         if (singleHostHttpClientFunction == null) {
-            singleHttpClientProvider = inetAddress -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress);
+            singleHttpClientProvider = inetAddress -> SingleHostHttpClientBuilder.newHttpClient(serverConfiguration.getHostname(), inetAddress, version);
         } else {
             singleHttpClientProvider = inetAddress -> singleHostHttpClientFunction.apply(inetAddress);
         }

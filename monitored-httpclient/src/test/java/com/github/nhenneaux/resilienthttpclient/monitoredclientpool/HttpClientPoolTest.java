@@ -56,8 +56,9 @@ class HttpClientPoolTest {
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
             "mastodon.online",
-            "travis-ci.com",
-            "google.com"
+            "microsoft.com",
+            "www.linkedin.com",
+            "travis-ci.com"
     );
 
     static {
@@ -114,6 +115,53 @@ class HttpClientPoolTest {
 
     }
 
+    @Test
+    @Timeout(60L)
+    void testConnectionToGoogleHttp3WhenSupported() throws URISyntaxException {
+        // Host header does work
+        final String hostname = "google.com";
+        testMinimalSingleHostClient(hostname);
+    }
+
+    @ParameterizedTest
+    @Timeout(60L)
+    @MethodSource("publicHosts")
+    @MethodSource("publicSpecificHosts")
+    void testMinimalSingleHostClient(String hostname) throws URISyntaxException {
+        final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
+        try (HttpClientPool httpClientPool = HttpClientPool
+                .builder(serverConfiguration)
+                .withSingleHostHttpClient(unused ->
+                        SingleHostHttpClientBuilder
+                                .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder()
+                                        .connectTimeout(Duration.ofSeconds(2L)))
+                                .withSni()
+                                .build()
+                )
+                .build()) {
+            waitOneMinute(hostname)
+                    .until(httpClientPool::getNextHttpClient, Optional::isPresent);
+
+            final Optional<SingleIpHttpClient> nextHttpClient = httpClientPool.getNextHttpClient();
+            try (SingleIpHttpClient singleIpHttpClient = nextHttpClient.orElseThrow()) {
+
+                final HttpClient httpClient = singleIpHttpClient.getHttpClient();
+                System.out.println("Calling " + hostname + " " + singleIpHttpClient.getInetAddress() + " healthiness " + singleIpHttpClient.getHealthy());
+
+                final int statusCode = httpClient.sendAsync(HttpRequest.newBuilder()
+                                        .uri(getUri(hostname, serverConfiguration))
+                                        .build(),
+                                HttpResponse.BodyHandlers.discarding())
+                        .thenApply(stringHttpResponse -> {
+                            System.out.println(stringHttpResponse.version());
+                            return stringHttpResponse.statusCode();
+                        })
+                        .join();
+                assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+            }
+        }
+    }
+
     @ParameterizedTest
     @Timeout(60L)
     @MethodSource("publicSpecificHosts")
@@ -138,11 +186,10 @@ class HttpClientPoolTest {
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
         }
-
     }
 
     private static URI getUri(String hostname, ServerConfiguration serverConfiguration) throws URISyntaxException {
-        return new URI("https", hostname, serverConfiguration.getHealthPath(),null);
+        return new URI("https", hostname, serverConfiguration.getHealthPath(), null);
     }
 
     @ParameterizedTest
@@ -335,7 +382,7 @@ class HttpClientPoolTest {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
                 .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
-                .serializationInclusion(JsonInclude.Include.NON_NULL).build();
+                .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_NULL).build();
     }
 
 

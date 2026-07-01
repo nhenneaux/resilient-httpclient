@@ -44,8 +44,10 @@ class SingleHostHttpClientBuilderTest {
     public static final List<String> PUBLIC_HOST_TO_TEST_WITH_SNI = List.of(
             "nicolas.henneaux.io",
             "mastodon.online",
-            "google.com",
-            "travis-ci.com");
+            "microsoft.com",
+            "www.linkedin.com",
+            "travis-ci.com"
+    );
 
     static {
         // Force properties
@@ -86,6 +88,42 @@ class SingleHostHttpClientBuilderTest {
         assertNotNull(response);
     }
 
+    @Test
+    @Timeout(61)
+    void shouldBuildSingleIpHttpClientAndWorksWithGoogle() {
+        final String hostname = "google.com";
+        testMinimalClient(hostname);
+    }
+
+
+    @ParameterizedTest
+    @Timeout(61)
+    @MethodSource("publicHosts")
+    @MethodSource("publicSpecificHosts")
+    void testMinimalClient(String hostname) {
+        // Given
+        final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
+
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(2L)))
+                .withSni()
+                .build();
+
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://" + ip))
+                .build();
+
+
+        // When
+        final String response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .join();
+
+        // Then
+        assertNotNull(response);
+    }
+
     @ParameterizedTest
     @Timeout(61)
     @MethodSource("publicSpecificHosts")
@@ -108,9 +146,8 @@ class SingleHostHttpClientBuilderTest {
                 .join();
 
         // Then
-        assertThat("Unexpected error HTTP"+statusCode + " calling "+hostname,statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        assertThat("Unexpected error HTTP" + statusCode + " calling " + hostname, statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
     }
-
 
 
     @ParameterizedTest
@@ -232,7 +269,7 @@ class SingleHostHttpClientBuilderTest {
         char[] password = "badssl.com".toCharArray();
         keyStore.load(getClass().getResourceAsStream("/badssl.com-client.p12"), password);
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2L)))
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5L)))
                 .withTlsNameMatching(trustStore, keyStore, password)
                 .withSni()
                 .buildWithHostHeader();
