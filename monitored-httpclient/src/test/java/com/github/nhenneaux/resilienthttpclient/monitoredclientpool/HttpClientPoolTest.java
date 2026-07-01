@@ -15,6 +15,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.MethodSources;
 
 import java.io.IOException;
 import java.net.*;
@@ -118,16 +119,24 @@ class HttpClientPoolTest {
     @Test
     @Timeout(60L)
     void testConnectionToGoogleHttp3WhenSupported() throws URISyntaxException {
+        // Host header does work
         final String hostname = "google.com";
+        testMinimalSingleHostClient(hostname);
+    }
+
+    @ParameterizedTest
+    @Timeout(60L)
+    @MethodSource("publicHosts")
+    @MethodSource("publicSpecificHosts")
+    void testMinimalSingleHostClient(String hostname) throws URISyntaxException {
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
         try (HttpClientPool httpClientPool = HttpClientPool
                 .builder(serverConfiguration)
-                .withSingleHostHttpClient(inetAddress ->
+                .withSingleHostHttpClient(_ ->
                         SingleHostHttpClientBuilder
                                 .builder(serverConfiguration.getHostname(), new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next(), HttpClient.newBuilder()
                                         .connectTimeout(Duration.ofSeconds(2L)))
                                 .withSni()
-
                                 .build()
                 )
                 .build()) {
@@ -144,12 +153,14 @@ class HttpClientPoolTest {
                                         .uri(getUri(hostname, serverConfiguration))
                                         .build(),
                                 HttpResponse.BodyHandlers.discarding())
-                        .thenApply(HttpResponse::statusCode)
+                        .thenApply(stringHttpResponse -> {
+                            System.out.println(stringHttpResponse.version());
+                            return stringHttpResponse.statusCode();
+                        })
                         .join();
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }
         }
-
     }
 
     @ParameterizedTest
@@ -171,7 +182,11 @@ class HttpClientPoolTest {
                                         .uri(getUri(hostname, serverConfiguration))
                                         .build(),
                                 HttpResponse.BodyHandlers.discarding())
-                        .thenApply(HttpResponse::statusCode)
+
+                        .thenApply(stringHttpResponse -> {
+                            System.out.println(stringHttpResponse.version());
+                            return stringHttpResponse.statusCode();
+                        })
                         .join();
                 assertThat(statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
             }

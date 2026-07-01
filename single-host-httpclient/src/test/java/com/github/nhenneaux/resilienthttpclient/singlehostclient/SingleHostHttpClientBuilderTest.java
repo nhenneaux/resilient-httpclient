@@ -91,11 +91,20 @@ class SingleHostHttpClientBuilderTest {
     @Test
     @Timeout(61)
     void shouldBuildSingleIpHttpClientAndWorksWithGoogle() {
-        // Given
         final String hostname = "google.com";
+        testMinimalClient(hostname);
+    }
+
+
+    @ParameterizedTest
+    @Timeout(61)
+    @MethodSource("publicHosts")
+    @MethodSource("publicSpecificHosts")
+    void testMinimalClient(String hostname) {
+        // Given
         final InetAddress ip = new DnsLookupWrapper().getInetAddressesByDnsLookUp(hostname).iterator().next();
 
-        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip,HttpClient.newBuilder()
+        final HttpClient client = SingleHostHttpClientBuilder.builder(hostname, ip, HttpClient.newBuilder()
                         .connectTimeout(Duration.ofSeconds(2L)))
                 .withSni()
                 .build();
@@ -137,9 +146,8 @@ class SingleHostHttpClientBuilderTest {
                 .join();
 
         // Then
-        assertThat("Unexpected error HTTP"+statusCode + " calling "+hostname,statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
+        assertThat("Unexpected error HTTP" + statusCode + " calling " + hostname, statusCode, allOf(Matchers.greaterThanOrEqualTo(200), Matchers.lessThanOrEqualTo(499)));
     }
-
 
 
     @ParameterizedTest
