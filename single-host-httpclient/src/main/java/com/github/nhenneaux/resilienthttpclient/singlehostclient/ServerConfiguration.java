@@ -15,6 +15,7 @@ public class ServerConfiguration {
     public static final int DEFAULT_FAILURE_RESPONSE_COUNT_THRESHOLD = -1; // It means no validation by failed response count
     public static final Consumer<HttpRequest.Builder> DEFAULT_REQUEST_TRANSFORMER = null;
     public static final String DEFAULT_PROTOCOL = "https";
+    public static final boolean DEFAULT_KEEP_HEALTHY_CLIENTS_ABSENT_FROM_DNS_LOOKUP = false;
     public static final Set<String> SUPPORTED_PROTOCOLS = Set.of("http", "https");
 
     private final String hostname;
@@ -26,6 +27,7 @@ public class ServerConfiguration {
     private final int failureResponseCountThreshold;
     private final Consumer<HttpRequest.Builder> requestTransformer;
     private final String protocol;
+    private final boolean keepHealthyClientsAbsentFromDnsLookup;
 
     public ServerConfiguration(String hostname) {
         this(
@@ -82,6 +84,23 @@ public class ServerConfiguration {
             Consumer<HttpRequest.Builder> requestTransformer,
             String protocol
     ) {
+        this(hostname, port, healthPath, dnsLookupRefreshPeriodInSeconds, connectionHealthCheckPeriodInSeconds, healthReadTimeoutInMilliseconds, failureResponseCountThreshold, requestTransformer, protocol, DEFAULT_KEEP_HEALTHY_CLIENTS_ABSENT_FROM_DNS_LOOKUP);
+    }
+
+    @SuppressWarnings("java:S107")// All parameters are needed
+    public ServerConfiguration(
+            String hostname,
+            int port,
+            String healthPath,
+            long dnsLookupRefreshPeriodInSeconds,
+            long connectionHealthCheckPeriodInSeconds,
+            long healthReadTimeoutInMilliseconds,
+            int failureResponseCountThreshold,
+            Consumer<HttpRequest.Builder> requestTransformer,
+            String protocol,
+            boolean keepHealthyClientsAbsentFromDnsLookup
+    ) {
+        this.keepHealthyClientsAbsentFromDnsLookup = keepHealthyClientsAbsentFromDnsLookup;
         this.hostname = hostname;
         this.port = port;
         this.healthPath = healthPath;
@@ -156,6 +175,16 @@ public class ServerConfiguration {
      */
     public String getProtocol() {
         return protocol;
+    }
+
+    /**
+     * Whether a client whose IP is absent from the DNS lookup is kept while it stays healthy, instead of being
+     * closed at the next refresh. A DNS answer can be capped and rotate, in which case an address is missing from
+     * consecutive answers while its target is still there. Beware that removing an address from the DNS then no
+     * longer takes its client out of the pool, the health check does.
+     */
+    public boolean isKeepHealthyClientsAbsentFromDnsLookup() {
+        return keepHealthyClientsAbsentFromDnsLookup;
     }
 
     @Override

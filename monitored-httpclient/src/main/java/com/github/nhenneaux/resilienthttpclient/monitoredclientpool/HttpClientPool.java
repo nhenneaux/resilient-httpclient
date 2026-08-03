@@ -7,6 +7,7 @@ import java.lang.System.Logger;
 import java.net.InetAddress;
 import java.net.http.HttpClient;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -19,7 +20,6 @@ import java.util.stream.Collectors;
 
 import static java.lang.System.Logger.Level;
 import static java.lang.System.getLogger;
-import static java.util.function.Predicate.not;
 
 /**
  * A HTTP clients pool which keeps internally a round robin list of HTTP clients.<br>
@@ -49,7 +49,8 @@ public class HttpClientPool implements AutoCloseable {
 
         // We schedule a refresh of DNS lookup to catch this change
         // Existing HTTP clients for which InetAddress is still present in the list will be kept
-        // HttpClients for which the ip has disappeared will be closed
+        // HttpClients for which the ip has disappeared will be closed, unless the configuration keeps the
+        // healthy ones, see ServerConfiguration#isKeepHealthyClientsAbsentFromDnsLookup
         // For the new IPs new Http clients will be created
         final long dnsLookupRefreshPeriodInSeconds = serverConfiguration.getDnsLookupRefreshPeriodInSeconds();
         this.scheduledFutureDnsRefresh = scheduledExecutorService.scheduleAtFixedRate(
@@ -130,7 +131,7 @@ public class HttpClientPool implements AutoCloseable {
             return;
         }
 
-        final List<SingleIpHttpClient> refreshedSingleIpHttpClients = updatedLookup.stream()
+        final List<SingleIpHttpClient> resolvedClients = updatedLookup.stream()
                 .map(inetAddress ->
                         useOldClientOrCreateNew(
                                 singleHttpClientProvider,
@@ -141,14 +142,29 @@ public class HttpClientPool implements AutoCloseable {
                         )
                 ).collect(Collectors.toUnmodifiableList());
 
-        httpClientsCache.set(new RoundRobinPool(refreshedSingleIpHttpClients));
+        final List<SingleIpHttpClient> clients = new ArrayList<>(resolvedClients);
+        final List<SingleIpHttpClient> clientsToClose = new ArrayList<>();
+        for (final SingleIpHttpClient oldClient : oldListOfClients) {
+            if (resolvedClients.contains(oldClient)) {
+                continue;
+            }
+            if (serverConfiguration.isKeepHealthyClientsAbsentFromDnsLookup() && isStillHealthy(oldClient)) {
+                clients.add(oldClient);
+            } else {
+                clientsToClose.add(oldClient);
+            }
+        }
 
-        // Close those clients whose inet address is not present anymore
-        oldListOfClients.stream()
-                .filter(not(refreshedSingleIpHttpClients::contains))
-                .forEach(oldClient -> {
-                    LOGGER.log(Level.INFO, () -> "The client with " + oldClient.getInetAddress().getHostAddress() + " for hostname " + hostname + " has been refreshed, closing the old instance.");                    oldClient.close();
-                });
+        httpClientsCache.set(new RoundRobinPool(clients));
+
+        clientsToClose.forEach(clientToClose -> {
+            LOGGER.log(Level.INFO, () -> "The client with " + clientToClose.getInetAddress().getHostAddress() + " for hostname " + hostname + " is absent from the lookup, closing it.");
+            clientToClose.close();
+        });
+    }
+
+    private static boolean isStillHealthy(final SingleIpHttpClient client) {
+        return client.getHealthy().get() && !client.shouldBeRefreshed();
     }
 
     private static boolean healthyFailureCount(final SingleIpHttpClient singleIpHttpClient, final ServerConfiguration serverConfiguration) {
