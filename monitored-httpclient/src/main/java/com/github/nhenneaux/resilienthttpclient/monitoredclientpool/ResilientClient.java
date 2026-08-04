@@ -16,6 +16,7 @@ import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -47,7 +48,7 @@ class ResilientClient extends HttpClient {
 
     static <T> CompletableFuture<HttpResponse<T>> handleConnectTimeout(Function<HttpClient, CompletableFuture<HttpResponse<T>>> send, RoundRobinPool roundRobinPool) {
         final SingleIpHttpClient firstClient = singleIpHttpClient(roundRobinPool);
-        return handleConnectTimeout(send, roundRobinPool, firstClient, new ArrayList<>());
+        return handleConnectTimeout(send, roundRobinPool, firstClient, new LinkedHashSet<>());
 
     }
 
@@ -96,10 +97,13 @@ class ResilientClient extends HttpClient {
             Function<HttpClient, CompletableFuture<HttpResponse<T>>> send,
             RoundRobinPool roundRobinPool,
             SingleIpHttpClient firstClient,
-            List<InetAddress> triedAddress
+            Set<InetAddress> triedAddress
     ) {
-        final long healthyNodes = roundRobinPool.getList().stream().filter(SingleIpHttpClient::isHealthy).count();
-        if (triedAddress.size() >= healthyNodes) {
+        final boolean everyHealthyClientTried = roundRobinPool.getList().stream()
+                .filter(SingleIpHttpClient::isHealthy)
+                .map(SingleIpHttpClient::getInetAddress)
+                .allMatch(triedAddress::contains);
+        if (everyHealthyClientTried) {
             final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = new CompletableFuture<>();
             httpResponseCompletableFuture.completeExceptionally(new HttpConnectTimeoutException("Cannot connect to the server, the following address were tried without success " + triedAddress + "."));
             return httpResponseCompletableFuture;
@@ -120,7 +124,7 @@ class ResilientClient extends HttpClient {
     private static <T> ClientWithResponseFuture<T> addExceptionHandlerFuture(final Function<HttpClient, CompletableFuture<HttpResponse<T>>> send,
                                                                              final RoundRobinPool roundRobinPool,
                                                                              final SingleIpHttpClient firstClient,
-                                                                             final List<InetAddress> triedAddress,
+                                                                             final Set<InetAddress> triedAddress,
                                                                              final ClientWithResponseFuture<T> clientWithResponseFuture) {
 
         final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = clientWithResponseFuture.httpResponseFuture
@@ -130,6 +134,10 @@ class ResilientClient extends HttpClient {
                             .filter(CONNECT_EXCEPTION_CLASS::contains)
                             .isPresent()
                     ) {
+                        return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
+                    }
+
+                    if (wasDisposedWhileHandedOut(throwable, clientWithResponseFuture.singleIpHttpClient)) {
                         return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
                     }
 
@@ -143,6 +151,11 @@ class ResilientClient extends HttpClient {
                 });
 
         return clientWithResponseFuture.withResponseFuture(httpResponseCompletableFuture);
+    }
+
+    private static boolean wasDisposedWhileHandedOut(final Throwable throwable, final SingleIpHttpClient singleIpHttpClient) {
+        return singleIpHttpClient.isClosing()
+                && (throwable instanceof IOException || throwable.getCause() instanceof IOException);
     }
 
     private static <T> CompletableFuture<HttpResponse<T>> addCounterRefresherFuture(final ClientWithResponseFuture<T> clientWithResponseFuture) {
@@ -188,6 +201,12 @@ class ResilientClient extends HttpClient {
                     throw httpConnectTimeoutException;
                 }
                 client = nextClient.get();
+            } catch (IOException e) {
+                if (!wasDisposedWhileHandedOut(e, client)) {
+                    throw e;
+                }
+                // The request was attempted on a client that was already disposed, send it with another client
+                client = roundRobinPool.next().orElseThrow(() -> e);
             }
         }
         throw new HttpConnectTimeoutException("Cannot connect to the HTTP server, tried to connect to the following IP " + tried + " to send the HTTP request " + request);

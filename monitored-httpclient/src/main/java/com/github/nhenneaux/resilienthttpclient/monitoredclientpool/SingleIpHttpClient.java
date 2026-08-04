@@ -34,6 +34,7 @@ public class SingleIpHttpClient implements AutoCloseable {
     private final Future<?> scheduledFuture;
     private final ServerConfiguration serverConfiguration;
     private final AtomicInteger failedResponseCount;
+    private final AtomicBoolean closing = new AtomicBoolean();
 
     /**
      * Create a new instance of the client and schedule a task to refresh is healthiness.
@@ -98,12 +99,23 @@ public class SingleIpHttpClient implements AutoCloseable {
 
     /**
      * If called and the previous health status was unhealthy, then a new health check is performed.
+     * A client whose close has been initiated is never healthy again.
      */
     public boolean isHealthy() {
+        if (closing.get()) {
+            return false;
+        }
         if (!healthy.get()) {
             checkHealthStatus();
         }
         return healthy.get();
+    }
+
+    /**
+     * @return whether {@link #close()} was initiated, in which case the underlying client rejects new requests
+     */
+    boolean isClosing() {
+        return closing.get();
     }
 
     /**
@@ -201,7 +213,9 @@ public class SingleIpHttpClient implements AutoCloseable {
 
     @Override
     public void close() {
+        closing.set(true);
         scheduledFuture.cancel(true);
+        HttpClientDisposer.dispose(httpClient);
     }
 
 }

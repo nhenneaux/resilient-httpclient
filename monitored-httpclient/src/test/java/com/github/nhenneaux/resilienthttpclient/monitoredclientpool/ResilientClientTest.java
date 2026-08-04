@@ -23,13 +23,20 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -479,5 +486,211 @@ class ResilientClientTest {
                     .mapToInt(SingleIpHttpClient::getFailedResponseCount)
                     .sum(), equalTo(1));
         }
+    }
+
+    @Test
+    void shouldSendToAnotherClientWhenTheOneHandedOutIsDisposed() throws IOException, InterruptedException {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final AtomicReference<SingleIpHttpClient> disposed = new AtomicReference<>();
+        final HttpClient disposedHttpClient = healthyHttpClient();
+        doAnswer(invocation -> {
+            // the pool refreshes and disposes the client between the round robin handing it out and the send
+            disposed.get().close();
+            throw new IOException("closed");
+        }).when(disposedHttpClient).send(httpRequest, bodyHandler);
+
+        final HttpClient survivingHttpClient = healthyHttpClient();
+        @SuppressWarnings("unchecked") final HttpResponse<Void> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        when(survivingHttpClient.send(httpRequest, bodyHandler)).thenReturn(okResponse);
+
+        disposed.set(singleIpHttpClient(disposedHttpClient, getInetAddress()));
+        final SingleIpHttpClient surviving = singleIpHttpClient(survivingHttpClient, InetAddress.getLoopbackAddress());
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(disposed.get(), surviving));
+
+        // When
+        final HttpResponse<Void> httpResponse = new ResilientClient(() -> roundRobinPool).send(httpRequest, bodyHandler);
+
+        // Then
+        assertSame(okResponse, httpResponse);
+        assertThat("the disposal is ours, not a server failure", disposed.get().getFailedResponseCount(), equalTo(0));
+    }
+
+    @Test
+    void shouldSendAsyncToAnotherClientWhenTheOneHandedOutIsDisposed() throws ExecutionException, InterruptedException {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final AtomicReference<SingleIpHttpClient> disposed = new AtomicReference<>();
+        final HttpClient disposedHttpClient = healthyHttpClient();
+        doAnswer(invocation -> {
+            disposed.get().close();
+            return CompletableFuture.failedFuture(new IOException("closed"));
+        }).when(disposedHttpClient).sendAsync(eq(httpRequest), any());
+
+        final HttpClient survivingHttpClient = healthyHttpClient();
+        @SuppressWarnings("unchecked") final HttpResponse<Void> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        doReturn(CompletableFuture.completedFuture(okResponse)).when(survivingHttpClient).sendAsync(eq(httpRequest), any());
+
+        disposed.set(singleIpHttpClient(disposedHttpClient, getInetAddress()));
+        final SingleIpHttpClient surviving = singleIpHttpClient(survivingHttpClient, InetAddress.getLoopbackAddress());
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(disposed.get(), surviving));
+
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponse = new ResilientClient(() -> roundRobinPool).sendAsync(httpRequest, bodyHandler);
+
+        // Then
+        assertSame(okResponse, httpResponse.get());
+        assertThat("the disposal is ours, not a server failure", disposed.get().getFailedResponseCount(), equalTo(0));
+    }
+
+    @Test
+    void shouldNotRetryWhenTheClientHandedOutIsStillInThePool() throws IOException, InterruptedException {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final HttpClient failingHttpClient = healthyHttpClient();
+        doThrow(new IOException("boom")).when(failingHttpClient).send(httpRequest, bodyHandler);
+        final HttpClient otherHttpClient = healthyHttpClient();
+
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(
+                singleIpHttpClient(failingHttpClient, getInetAddress()),
+                singleIpHttpClient(otherHttpClient, InetAddress.getLoopbackAddress())));
+
+        // When
+        final IOException ioException = assertThrows(IOException.class, () -> new ResilientClient(() -> roundRobinPool).send(httpRequest, bodyHandler));
+
+        // Then
+        assertEquals("boom", ioException.getMessage());
+        verify(otherHttpClient, never()).send(httpRequest, bodyHandler);
+    }
+
+    @Test
+    void shouldFailWhenTheOnlyClientIsDisposedWhileHandedOut() throws IOException, InterruptedException {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final AtomicReference<SingleIpHttpClient> disposed = new AtomicReference<>();
+        final HttpClient disposedHttpClient = healthyHttpClient();
+        doAnswer(invocation -> {
+            disposed.get().close();
+            throw new IOException("closed");
+        }).when(disposedHttpClient).send(httpRequest, bodyHandler);
+
+        disposed.set(singleIpHttpClient(disposedHttpClient, getInetAddress()));
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(disposed.get()));
+
+        // When
+        final IOException ioException = assertThrows(IOException.class, () -> new ResilientClient(() -> roundRobinPool).send(httpRequest, bodyHandler));
+
+        // Then
+        assertEquals("closed", ioException.getMessage());
+    }
+
+    @Test
+    void shouldFailAsyncWhenTheOnlyClientIsDisposedWhileHandedOut() {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final AtomicReference<SingleIpHttpClient> disposed = new AtomicReference<>();
+        final HttpClient disposedHttpClient = healthyHttpClient();
+        doAnswer(invocation -> {
+            disposed.get().close();
+            return CompletableFuture.failedFuture(new IOException("closed"));
+        }).when(disposedHttpClient).sendAsync(eq(httpRequest), any());
+
+        disposed.set(singleIpHttpClient(disposedHttpClient, getInetAddress()));
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(disposed.get()));
+
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponse = new ResilientClient(() -> roundRobinPool).sendAsync(httpRequest, bodyHandler);
+
+        // Then
+        final ExecutionException executionException = assertThrows(ExecutionException.class, httpResponse::get);
+        assertThat(executionException.getCause(), instanceOf(HttpConnectTimeoutException.class));
+    }
+
+    @Test
+    void shouldNotRetryWhenADisposedClientFailedAfterTheRequestWasSent() {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final AtomicReference<SingleIpHttpClient> disposed = new AtomicReference<>();
+        final HttpClient disposedHttpClient = healthyHttpClient();
+        doAnswer(invocation -> {
+            // The response came back, so the request did reach the server, and the body handler failed on it
+            disposed.get().close();
+            return CompletableFuture.failedFuture(new IllegalStateException("invalid body"));
+        }).when(disposedHttpClient).sendAsync(eq(httpRequest), any());
+
+        final HttpClient otherHttpClient = healthyHttpClient();
+
+        disposed.set(singleIpHttpClient(disposedHttpClient, getInetAddress()));
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(disposed.get(), singleIpHttpClient(otherHttpClient, InetAddress.getLoopbackAddress())));
+
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponse = new ResilientClient(() -> roundRobinPool).sendAsync(httpRequest, bodyHandler);
+
+        // Then
+        final ExecutionException executionException = assertThrows(ExecutionException.class, httpResponse::get);
+        assertThat(executionException.getCause(), instanceOf(IllegalStateException.class));
+        verify(otherHttpClient, never()).sendAsync(eq(httpRequest), any());
+    }
+
+    @Test
+    void shouldTryTheOtherClientWhenTheFirstOneGoesDownWhileConnecting() {
+        // Given
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final HttpClient downHttpClient = mock(HttpClient.class);
+        @SuppressWarnings("unchecked") final HttpResponse<Void> healthResponse = mock(HttpResponse.class);
+        when(healthResponse.statusCode()).thenReturn(200, 500);
+        doReturn(CompletableFuture.completedFuture(healthResponse)).when(downHttpClient).sendAsync(any(), any());
+        final SingleIpHttpClient down = singleIpHttpClient(downHttpClient, getInetAddress());
+
+        doAnswer(invocation -> {
+            // The node is down, so the scheduled health check sees it too
+            down.checkHealthStatus();
+            return CompletableFuture.failedFuture(new CompletionException(new ConnectException("connection refused")));
+        }).when(downHttpClient).sendAsync(eq(httpRequest), any());
+
+        final HttpClient upHttpClient = healthyHttpClient();
+        @SuppressWarnings("unchecked") final HttpResponse<Void> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        doReturn(CompletableFuture.completedFuture(okResponse)).when(upHttpClient).sendAsync(eq(httpRequest), any());
+
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(down, singleIpHttpClient(upHttpClient, InetAddress.getLoopbackAddress())));
+
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponse = new ResilientClient(() -> roundRobinPool).sendAsync(httpRequest, bodyHandler);
+
+        // Then
+        assertSame(okResponse, httpResponse.join());
+    }
+
+    private static HttpRequest junitRequest() {
+        return HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
+    }
+
+    private static SingleIpHttpClient singleIpHttpClient(final HttpClient httpClient, final InetAddress inetAddress) {
+        return new SingleIpHttpClient(httpClient, inetAddress, new ServerConfiguration(UUID.randomUUID().toString()));
+    }
+
+    private static HttpClient healthyHttpClient() {
+        final HttpClient httpClient = mock(HttpClient.class);
+        @SuppressWarnings("unchecked") final HttpResponse<Void> healthResponse = mock(HttpResponse.class);
+        when(healthResponse.statusCode()).thenReturn(200);
+        doReturn(CompletableFuture.completedFuture(healthResponse)).when(httpClient).sendAsync(any(), any());
+        return httpClient;
     }
 }

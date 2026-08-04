@@ -67,6 +67,23 @@ class SingleIpHttpClientTest {
     }
 
     @Test
+    void shouldNotBeHealthyOnceClosed() {
+        // Given
+        final String hostname = oneHostname();
+        final HttpClient httpClient = mock(HttpClient.class);
+        @SuppressWarnings("unchecked") final HttpResponse<Void> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.sendAsync(any(HttpRequest.class), any(DISCARDING_BODY_HANDLER_CLASS))).thenReturn(CompletableFuture.completedFuture(httpResponse));
+        final SingleIpHttpClient singleIpHttpClient = new SingleIpHttpClient(httpClient, InetAddress.getLoopbackAddress(), new ServerConfiguration(hostname));
+        assertTrue(singleIpHttpClient.isHealthy());
+        // When
+        singleIpHttpClient.close();
+        // Then
+        assertTrue(singleIpHttpClient.isClosing());
+        assertFalse(singleIpHttpClient.isHealthy(), "the round robin must not hand out a closed client");
+    }
+
+    @Test
     void shouldBeUnHealthyWith500Status() {
         // Given
         final String hostname = oneHostname();
