@@ -76,7 +76,7 @@ class ResilientClientTest {
         final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> resilientClient.send(httpRequest, bodyHandler));
 
         // Then
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit GET", httpConnectTimeoutException.getMessage());
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.single[...]
         verify(ipHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
         verify(ipHttpClient).incrementFailureCount();
     }
@@ -387,7 +387,7 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccess() throws IOException, URISyntaxException, InterruptedException {
-        final String hostname = "free.mockerapi.com";
+        final String hostname = "httpbin.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
@@ -395,7 +395,7 @@ class ResilientClientTest {
                     .resilientClient()
                     .send(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("https", hostname, -1, "/500").toURI())
+                                    .uri(new URL("https", hostname, -1, "/status/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()
@@ -435,7 +435,7 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
-        final String hostname = "free.mockerapi.com";
+        final String hostname = "httpbin.org";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
@@ -443,7 +443,7 @@ class ResilientClientTest {
                     .resilientClient()
                     .sendAsync(
                             HttpRequest.newBuilder()
-                                    .uri(new URL("https", hostname, -1, "/500").toURI())
+                                    .uri(new URL("https", hostname, -1, "/status/500").toURI())
                                     .GET()
                                     .build(),
                             HttpResponse.BodyHandlers.discarding()
