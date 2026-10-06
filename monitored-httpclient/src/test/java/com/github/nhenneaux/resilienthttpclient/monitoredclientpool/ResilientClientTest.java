@@ -76,7 +76,7 @@ class ResilientClientTest {
         final HttpConnectTimeoutException httpConnectTimeoutException = assertThrows(HttpConnectTimeoutException.class, () -> resilientClient.send(httpRequest, bodyHandler));
 
         // Then
-        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.single[...]
+        assertEquals("Cannot connect to the HTTP server, tried to connect to the following IP [" + hostAddress + "] to send the HTTP request https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit GET", httpConnectTimeoutException.getMessage());
         verify(ipHttpClient, times(0)).refreshFailureCountWithStatusCode(anyInt());
         verify(ipHttpClient).incrementFailureCount();
     }
