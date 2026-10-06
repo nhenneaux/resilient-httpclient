@@ -387,7 +387,7 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccess() throws IOException, URISyntaxException, InterruptedException {
-        final String hostname = "mock.httpstatus.io";
+        final String hostname = "free.mockerapi.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
@@ -435,7 +435,7 @@ class ResilientClientTest {
 
     @Test
     void shouldAddFailureCountByWhenStatusCodeIsNotSuccessWhenSendAsync() throws IOException, URISyntaxException, InterruptedException, ExecutionException {
-        final String hostname = "mock.httpstatus.io";
+        final String hostname = "free.mockerapi.com";
         final ServerConfiguration serverConfiguration = new ServerConfiguration(hostname);
 
         try (final HttpClientPool httpClientPool = HttpClientPool.builder(serverConfiguration).withVersion(HttpClient.Version.HTTP_1_1).build()) {
