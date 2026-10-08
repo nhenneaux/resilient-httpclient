@@ -127,35 +127,54 @@ class ResilientClient extends HttpClient {
                                                                              final Set<InetAddress> triedAddress,
                                                                              final ClientWithResponseFuture<T> clientWithResponseFuture) {
 
+        // Use handle + thenCompose (not exceptionally + join) so failover stays non-blocking on the completion thread.
         final CompletableFuture<HttpResponse<T>> httpResponseCompletableFuture = clientWithResponseFuture.httpResponseFuture
-                .exceptionally(throwable -> {
-                    if (Optional.ofNullable(throwable.getCause())
-                            .map(Object::getClass)
-                            .filter(CONNECT_EXCEPTION_CLASS::contains)
-                            .isPresent()
-                    ) {
-                        return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
+                .handle((response, throwable) -> {
+                    if (throwable == null) {
+                        return CompletableFuture.completedFuture(response);
                     }
-
-                    if (wasDisposedWhileHandedOut(throwable, clientWithResponseFuture.singleIpHttpClient)) {
-                        return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress).join();
+                    if (isConnectFailure(throwable)
+                            || wasDisposedWhileHandedOut(throwable, clientWithResponseFuture.singleIpHttpClient)) {
+                        return handleConnectTimeout(send, roundRobinPool, firstClient, triedAddress);
                     }
-
-                    if (throwable instanceof Error) {
-                        throw (Error) throwable;
-                    }
-                    if (throwable instanceof RuntimeException) {
-                        throw (RuntimeException) throwable;
-                    }
-                    throw new IllegalStateException(throwable);
-                });
+                    final CompletableFuture<HttpResponse<T>> failed = new CompletableFuture<>();
+                    failed.completeExceptionally(propagateAsyncFailure(throwable));
+                    return failed;
+                })
+                .thenCompose(Function.identity());
 
         return clientWithResponseFuture.withResponseFuture(httpResponseCompletableFuture);
     }
 
+    /**
+     * Whether the failure is a connect timeout / connection refused, including when wrapped (e.g. in {@link java.util.concurrent.CompletionException}).
+     */
+    static boolean isConnectFailure(final Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (CONNECT_EXCEPTION_CLASS.contains(current.getClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Throwable propagateAsyncFailure(final Throwable throwable) {
+        if (throwable instanceof Error || throwable instanceof RuntimeException) {
+            return throwable;
+        }
+        return new IllegalStateException(throwable);
+    }
+
     private static boolean wasDisposedWhileHandedOut(final Throwable throwable, final SingleIpHttpClient singleIpHttpClient) {
-        return singleIpHttpClient.isClosing()
-                && (throwable instanceof IOException || throwable.getCause() instanceof IOException);
+        if (!singleIpHttpClient.isClosing()) {
+            return false;
+        }
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (current instanceof IOException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static <T> CompletableFuture<HttpResponse<T>> addCounterRefresherFuture(final ClientWithResponseFuture<T> clientWithResponseFuture) {

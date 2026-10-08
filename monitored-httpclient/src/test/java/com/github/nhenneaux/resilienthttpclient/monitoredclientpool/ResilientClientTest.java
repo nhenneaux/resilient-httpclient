@@ -678,6 +678,40 @@ class ResilientClientTest {
         assertSame(okResponse, httpResponse.join());
     }
 
+    @Test
+    void shouldFailoverAsyncOnBareConnectExceptionWithoutWrapper() {
+        // Given — sendAsync may complete with ConnectException itself (not only as a cause)
+        final HttpRequest httpRequest = junitRequest();
+        final HttpResponse.BodyHandler<Void> bodyHandler = HttpResponse.BodyHandlers.discarding();
+
+        final HttpClient downHttpClient = healthyHttpClient();
+        doReturn(CompletableFuture.failedFuture(new ConnectException("connection refused")))
+                .when(downHttpClient).sendAsync(eq(httpRequest), any());
+
+        final HttpClient upHttpClient = healthyHttpClient();
+        @SuppressWarnings("unchecked") final HttpResponse<Void> okResponse = mock(HttpResponse.class);
+        when(okResponse.statusCode()).thenReturn(200);
+        doReturn(CompletableFuture.completedFuture(okResponse)).when(upHttpClient).sendAsync(eq(httpRequest), any());
+
+        final RoundRobinPool roundRobinPool = new RoundRobinPool(List.of(
+                singleIpHttpClient(downHttpClient, getInetAddress()),
+                singleIpHttpClient(upHttpClient, InetAddress.getLoopbackAddress())));
+
+        // When
+        final CompletableFuture<HttpResponse<Void>> httpResponse = new ResilientClient(() -> roundRobinPool).sendAsync(httpRequest, bodyHandler);
+
+        // Then
+        assertSame(okResponse, httpResponse.join());
+    }
+
+    @Test
+    void isConnectFailureRecognizesBareAndWrappedConnectExceptions() {
+        assertThat(ResilientClient.isConnectFailure(new ConnectException("refused")), equalTo(true));
+        assertThat(ResilientClient.isConnectFailure(new HttpConnectTimeoutException("timeout")), equalTo(true));
+        assertThat(ResilientClient.isConnectFailure(new CompletionException(new ConnectException("refused"))), equalTo(true));
+        assertThat(ResilientClient.isConnectFailure(new IllegalStateException("other")), equalTo(false));
+    }
+
     private static HttpRequest junitRequest() {
         return HttpRequest.newBuilder().uri(URI.create("https://com.github.nhenneaux.resilienthttpclient.singlehostclient.ResilientClientTest.junit")).build();
     }
